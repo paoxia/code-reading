@@ -7,6 +7,14 @@
       "status": "active",
       "path": "code/spring-ai-alibaba",
       "notes": "阿里巴巴开源的Java AI框架"
+    },
+    {
+      "name": "agentscope-java",
+      "repo": "https://github.com/agentscope-ai/agentscope-java",
+      "description": "Build distributed, production-grade, long-running agents",
+      "status": "active",
+      "path": "code/agentscope-java",
+      "notes": "构建分布式、生产级、长期运行的Agent框架"
     }
   ]
 }
