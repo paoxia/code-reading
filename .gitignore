@@ -1,0 +1,6 @@
+# 忽略克隆的项目源码
+code/
+
+# 系统文件
+.DS_Store
+Thumbs.db
