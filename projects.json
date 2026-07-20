@@ -15,6 +15,14 @@
       "status": "active",
       "path": "code/agentscope-java",
       "notes": "构建分布式、生产级、长期运行的Agent框架"
+    },
+    {
+      "name": "annotated-transformer",
+      "repo": "https://github.com/harvardnlp/annotated-transformer",
+      "description": "An annotated implementation of the Transformer paper",
+      "status": "active",
+      "path": "code/annotated-transformer",
+      "notes": "Transformer论文的注释实现，深度学习经典教程"
     }
   ]
 }
