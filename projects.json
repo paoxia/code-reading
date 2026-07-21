@@ -23,6 +23,38 @@
       "status": "active",
       "path": "code/annotated-transformer",
       "notes": "Transformer论文的注释实现，深度学习经典教程"
+    },
+    {
+      "name": "mini-swe-agent",
+      "repo": "https://github.com/SWE-agent/mini-swe-agent",
+      "description": "A minimal AI software engineering agent",
+      "status": "active",
+      "path": "code/mini-swe-agent",
+      "notes": "以极简实现研究Agent Loop、线性消息历史和Bash工具执行"
+    },
+    {
+      "name": "pi",
+      "repo": "https://github.com/earendil-works/pi",
+      "description": "A self-extensible coding agent and agent harness",
+      "status": "active",
+      "path": "code/pi",
+      "notes": "研究模块化Agent Runtime、统一LLM接口、工具调用和终端交互"
+    },
+    {
+      "name": "opencode",
+      "repo": "https://github.com/anomalyco/opencode",
+      "description": "The open source coding agent",
+      "status": "active",
+      "path": "code/opencode",
+      "notes": "研究完整终端Coding Agent的会话、工具、权限和扩展架构"
+    },
+    {
+      "name": "codex",
+      "repo": "https://github.com/openai/codex",
+      "description": "A lightweight coding agent that runs in your terminal",
+      "status": "active",
+      "path": "code/codex",
+      "notes": "研究Rust实现的Agent运行时、沙箱、审批、协议和终端界面"
     }
   ]
 }
