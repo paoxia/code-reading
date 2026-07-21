@@ -55,6 +55,14 @@
       "status": "active",
       "path": "code/codex",
       "notes": "研究Rust实现的Agent运行时、沙箱、审批、协议和终端界面"
+    },
+    {
+      "name": "sub2api",
+      "repo": "https://github.com/Wei-Shaw/sub2api",
+      "description": "An AI API gateway for managing and distributing subscription quotas",
+      "status": "active",
+      "path": "code/sub2api",
+      "notes": "研究多租户AI API网关的鉴权、账号调度、协议转发、故障切换和计费闭环"
     }
   ]
 }
