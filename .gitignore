@@ -5,3 +5,9 @@ code/*
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# Notes 静态站点构建依赖
+notes-site/node_modules/
+
+# Notes 静态站点生成产物
+html/
