@@ -71,6 +71,22 @@
       "status": "active",
       "path": "code/multica",
       "notes": "研究托管式Agent平台的任务队列、本地Daemon、统一CLI适配、实时状态同步和多Agent协作"
+    },
+    {
+      "name": "openclaw",
+      "repo": "https://github.com/openclaw/openclaw",
+      "description": "Your own personal AI assistant. Any OS. Any Platform.",
+      "status": "active",
+      "path": "code/openclaw",
+      "notes": "研究常驻Gateway、渠道路由、Agent Runtime、插件系统、会话持久化和多Agent协作"
+    },
+    {
+      "name": "hermes-agent",
+      "repo": "https://github.com/NousResearch/hermes-agent",
+      "description": "The agent that grows with you",
+      "status": "active",
+      "path": "code/hermes-agent",
+      "notes": "研究多入口Agent内核、工具注册、Provider适配、长期记忆、消息网关和子Agent委托"
     }
   ]
 }
