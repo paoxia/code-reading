@@ -63,6 +63,14 @@
       "status": "active",
       "path": "code/sub2api",
       "notes": "研究多租户AI API网关的鉴权、账号调度、协议转发、故障切换和计费闭环"
+    },
+    {
+      "name": "multica",
+      "repo": "https://github.com/multica-ai/multica",
+      "description": "An open-source managed agents platform",
+      "status": "active",
+      "path": "code/multica",
+      "notes": "研究托管式Agent平台的任务队列、本地Daemon、统一CLI适配、实时状态同步和多Agent协作"
     }
   ]
 }
