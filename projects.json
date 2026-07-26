@@ -1,7 +1,35 @@
 {
+  "groups": [
+    {
+      "id": "coding-agents",
+      "label": "Coding Agent",
+      "description": "直接面向代码阅读、修改、测试与终端协作的智能体"
+    },
+    {
+      "id": "agent-frameworks",
+      "label": "Agent 框架",
+      "description": "用于构建、编排和运行 Agent 应用的开发框架"
+    },
+    {
+      "id": "agent-platforms",
+      "label": "Agent 平台与助手",
+      "description": "面向长期运行、托管、多入口或个人场景的 Agent 系统"
+    },
+    {
+      "id": "ai-infrastructure",
+      "label": "AI 基础设施",
+      "description": "模型推理、服务化、协议转换与 API 网关"
+    },
+    {
+      "id": "foundations",
+      "label": "模型原理与基础",
+      "description": "经典模型架构、论文实现与基础原理"
+    }
+  ],
   "projects": [
     {
       "name": "spring-ai-alibaba",
+      "group": "agent-frameworks",
       "repo": "https://github.com/alibaba/spring-ai-alibaba",
       "description": "Agentic AI Framework for Java Developers",
       "status": "active",
@@ -10,6 +38,7 @@
     },
     {
       "name": "agentscope-java",
+      "group": "agent-frameworks",
       "repo": "https://github.com/agentscope-ai/agentscope-java",
       "description": "Build distributed, production-grade, long-running agents",
       "status": "active",
@@ -18,6 +47,7 @@
     },
     {
       "name": "annotated-transformer",
+      "group": "foundations",
       "repo": "https://github.com/harvardnlp/annotated-transformer",
       "description": "An annotated implementation of the Transformer paper",
       "status": "active",
@@ -26,6 +56,7 @@
     },
     {
       "name": "mini-swe-agent",
+      "group": "coding-agents",
       "repo": "https://github.com/SWE-agent/mini-swe-agent",
       "description": "A minimal AI software engineering agent",
       "status": "active",
@@ -34,6 +65,7 @@
     },
     {
       "name": "pi",
+      "group": "coding-agents",
       "repo": "https://github.com/earendil-works/pi",
       "description": "A self-extensible coding agent and agent harness",
       "status": "active",
@@ -42,6 +74,7 @@
     },
     {
       "name": "opencode",
+      "group": "coding-agents",
       "repo": "https://github.com/anomalyco/opencode",
       "description": "The open source coding agent",
       "status": "active",
@@ -50,6 +83,7 @@
     },
     {
       "name": "codex",
+      "group": "coding-agents",
       "repo": "https://github.com/openai/codex",
       "description": "A lightweight coding agent that runs in your terminal",
       "status": "active",
@@ -58,6 +92,7 @@
     },
     {
       "name": "sub2api",
+      "group": "ai-infrastructure",
       "repo": "https://github.com/Wei-Shaw/sub2api",
       "description": "An AI API gateway for managing and distributing subscription quotas",
       "status": "active",
@@ -66,6 +101,7 @@
     },
     {
       "name": "multica",
+      "group": "agent-platforms",
       "repo": "https://github.com/multica-ai/multica",
       "description": "An open-source managed agents platform",
       "status": "active",
@@ -74,6 +110,7 @@
     },
     {
       "name": "openclaw",
+      "group": "agent-platforms",
       "repo": "https://github.com/openclaw/openclaw",
       "description": "Your own personal AI assistant. Any OS. Any Platform.",
       "status": "active",
@@ -82,6 +119,7 @@
     },
     {
       "name": "hermes-agent",
+      "group": "agent-platforms",
       "repo": "https://github.com/NousResearch/hermes-agent",
       "description": "The agent that grows with you",
       "status": "active",
@@ -90,6 +128,7 @@
     },
     {
       "name": "langchain",
+      "group": "agent-frameworks",
       "repo": "https://github.com/langchain-ai/langchain",
       "description": "The agent engineering platform",
       "status": "active",
@@ -98,6 +137,7 @@
     },
     {
       "name": "langgraph",
+      "group": "agent-frameworks",
       "repo": "https://github.com/langchain-ai/langgraph",
       "description": "Build resilient language agents as graphs",
       "status": "active",
@@ -106,6 +146,7 @@
     },
     {
       "name": "spring-ai",
+      "group": "agent-frameworks",
       "repo": "https://github.com/spring-projects/spring-ai",
       "description": "An Application Framework for AI Engineering",
       "status": "active",
@@ -114,6 +155,7 @@
     },
     {
       "name": "vllm",
+      "group": "ai-infrastructure",
       "repo": "https://github.com/vllm-project/vllm",
       "description": "A high-throughput and memory-efficient inference and serving engine for LLMs",
       "status": "active",
@@ -122,6 +164,7 @@
     },
     {
       "name": "kimi-code",
+      "group": "coding-agents",
       "repo": "https://github.com/MoonshotAI/kimi-code",
       "description": "An AI coding agent that runs in your terminal",
       "status": "active",
@@ -130,6 +173,7 @@
     },
     {
       "name": "trae-agent",
+      "group": "coding-agents",
       "repo": "https://github.com/bytedance/trae-agent",
       "description": "LLM-based agent for general purpose software engineering tasks",
       "status": "active",

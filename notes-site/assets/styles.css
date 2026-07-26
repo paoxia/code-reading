@@ -244,6 +244,28 @@ kbd {
   padding: 0 10px 10px;
 }
 
+.project-nav-group + .project-nav-group {
+  margin-top: 17px;
+}
+
+.project-nav-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px 5px;
+  color: var(--faint);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.project-nav-group-heading span:last-child {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0;
+}
+
 .project-nav-item + .project-nav-item {
   margin-top: 3px;
 }
@@ -815,6 +837,54 @@ kbd {
   gap: 15px;
 }
 
+.project-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 46px;
+}
+
+.project-group {
+  scroll-margin-top: calc(var(--topbar-height) + 20px);
+}
+
+.project-group-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 28px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 15px;
+  padding: 0 2px 13px;
+}
+
+.project-group-heading div {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.project-group-heading span {
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.project-group-heading strong {
+  color: var(--accent-strong);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+}
+
+.project-group-heading p {
+  max-width: 480px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+  text-align: right;
+}
+
 .project-card {
   position: relative;
   min-height: 290px;
@@ -1286,6 +1356,16 @@ kbd {
   }
 
   .section-heading p {
+    text-align: left;
+  }
+
+  .project-group-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .project-group-heading p {
     text-align: left;
   }
 
