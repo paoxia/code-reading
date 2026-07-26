@@ -24,15 +24,18 @@ Hooks、Interceptors、Skills 以及 Sequential、Parallel、Loop、Routing 等�
 ## 阅读笔记
 
 - [ReactAgent 总览：Multi-Agent、Tool Calling、Skills 与 Graph](./react-agent-architecture.md)
+- [Hook 与 Interceptor：执行层级、调用链与选型](./hook-and-interceptor.md)
 - [Multi-Agent 实现](./multi-agent.md)
 - [Tool Calling 实现](./tool-calling.md)
 - [Skills 实现](./skills.md)
 - [Graph 运行时实现](./graph-runtime.md)
+- [生产运行能力：横切扩展、持久化、可观测性与 A2A](./production-capabilities.md)
 
 ## 学习目标
 
 - [x] 理解 ReactAgent、Tool Calling 与 Graph 的关系
 - [x] 理解 Multi-Agent 和 Skills 的主要实现方式
 - [x] 掌握 Graph Runtime 的流式执行与中断恢复细节
-- [ ] 阅读各类生产级 Hook 和 Interceptor
+- [x] 阅读各类生产级 Hook 和 Interceptor
+- [x] 理解 Checkpoint、长期 Store、Observation 与 A2A 的边界
 - [ ] 学习设计模式和最佳实践
