@@ -119,6 +119,22 @@
       "status": "active",
       "path": "code/vllm",
       "notes": "研究V1多进程架构、统一调度器、连续批处理、KV Cache块管理、Prefix Caching、Model Runner、Attention Backend和分布式执行"
+    },
+    {
+      "name": "kimi-code",
+      "repo": "https://github.com/MoonshotAI/kimi-code",
+      "description": "An AI coding agent that runs in your terminal",
+      "status": "active",
+      "path": "code/kimi-code",
+      "notes": "研究终端Coding Agent的会话循环、工具系统、上下文管理、子Agent并行协作、插件机制、TUI和ACP集成"
+    },
+    {
+      "name": "trae-agent",
+      "repo": "https://github.com/bytedance/trae-agent",
+      "description": "LLM-based agent for general purpose software engineering tasks",
+      "status": "active",
+      "path": "code/trae-agent",
+      "notes": "研究模块化软件工程Agent架构、多模型适配、工具调用、交互式CLI、执行轨迹记录和Docker隔离运行"
     }
   ]
 }
