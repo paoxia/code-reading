@@ -87,6 +87,38 @@
       "status": "active",
       "path": "code/hermes-agent",
       "notes": "研究多入口Agent内核、工具注册、Provider适配、长期记忆、消息网关和子Agent委托"
+    },
+    {
+      "name": "langchain",
+      "repo": "https://github.com/langchain-ai/langchain",
+      "description": "The agent engineering platform",
+      "status": "active",
+      "path": "code/langchain",
+      "notes": "研究Runnable组合、模型与工具抽象、基于LangGraph的Agent工厂、中间件和集成生态"
+    },
+    {
+      "name": "langgraph",
+      "repo": "https://github.com/langchain-ai/langgraph",
+      "description": "Build resilient language agents as graphs",
+      "status": "active",
+      "path": "code/langgraph",
+      "notes": "研究StateGraph、Pregel执行引擎、Channel状态合并、Checkpoint、Interrupt和持久化工作流"
+    },
+    {
+      "name": "spring-ai",
+      "repo": "https://github.com/spring-projects/spring-ai",
+      "description": "An Application Framework for AI Engineering",
+      "status": "active",
+      "path": "code/spring-ai",
+      "notes": "研究Spring风格模型抽象、ChatClient、Advisor链、工具调用、记忆、RAG、MCP和自动配置"
+    },
+    {
+      "name": "vllm",
+      "repo": "https://github.com/vllm-project/vllm",
+      "description": "A high-throughput and memory-efficient inference and serving engine for LLMs",
+      "status": "active",
+      "path": "code/vllm",
+      "notes": "研究V1多进程架构、统一调度器、连续批处理、KV Cache块管理、Prefix Caching、Model Runner、Attention Backend和分布式执行"
     }
   ]
 }
