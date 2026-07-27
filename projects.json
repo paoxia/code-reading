@@ -24,6 +24,11 @@
       "id": "foundations",
       "label": "模型原理与基础",
       "description": "经典模型架构、论文实现与基础原理"
+    },
+    {
+      "id": "ai-applications",
+      "label": "AI 应用与示例",
+      "description": "面向具体行业和业务场景的 AI 应用、工作流与参考实现"
     }
   ],
   "projects": [
@@ -82,6 +87,15 @@
       "notes": "研究完整终端Coding Agent的会话、工具、权限和扩展架构"
     },
     {
+      "name": "continue",
+      "group": "coding-agents",
+      "repo": "https://github.com/continuedev/continue",
+      "description": "Open-source coding agent",
+      "status": "active",
+      "path": "code/continue",
+      "notes": "研究开源Coding Agent的模型接入、上下文构建、工具执行和IDE集成"
+    },
+    {
       "name": "codex",
       "group": "coding-agents",
       "repo": "https://github.com/openai/codex",
@@ -125,6 +139,15 @@
       "status": "active",
       "path": "code/hermes-agent",
       "notes": "研究多入口Agent内核、工具注册、Provider适配、长期记忆、消息网关和子Agent委托"
+    },
+    {
+      "name": "openmanus",
+      "group": "agent-platforms",
+      "repo": "https://github.com/FoundationAgents/OpenManus",
+      "description": "No fortress, purely open ground. OpenManus is Coming.",
+      "status": "active",
+      "path": "code/openmanus",
+      "notes": "研究通用Agent的循环、工具系统、规划执行、浏览器能力和多Agent协作"
     },
     {
       "name": "langchain",
@@ -179,6 +202,15 @@
       "status": "active",
       "path": "code/trae-agent",
       "notes": "研究模块化软件工程Agent架构、多模型适配、工具调用、交互式CLI、执行轨迹记录和Docker隔离运行"
+    },
+    {
+      "name": "financial-services",
+      "group": "ai-applications",
+      "repo": "https://github.com/anthropics/financial-services",
+      "description": "AI agent examples and workflows for financial services",
+      "status": "active",
+      "path": "code/financial-services",
+      "notes": "研究Anthropic面向金融服务场景提供的Agent示例、工作流和参考实现"
     }
   ]
 }

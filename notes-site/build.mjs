@@ -147,9 +147,7 @@ const configuredByName = new Map(
 );
 const encounteredNames = [...new Set(notes.map((note) => note.projectName))];
 const orderedProjectNames = [
-  ...configuredProjects
-    .map((project) => project.name)
-    .filter((name) => encounteredNames.includes(name)),
+  ...configuredProjects.map((project) => project.name),
   ...encounteredNames.filter((name) => !configuredByName.has(name)).sort(),
 ];
 const projects = orderedProjectNames.map((name) => {
@@ -171,7 +169,7 @@ const projects = orderedProjectNames.map((name) => {
     status: configured.status ?? "",
     group: configured.group ?? "other",
     docs,
-    home: docs[0]?.outputRelative,
+    home: docs[0]?.outputRelative ?? `projects/${name}/index.html`,
   };
 });
 const projectByName = new Map(projects.map((project) => [project.name, project]));
@@ -192,6 +190,7 @@ const projectGroups = orderedProjectGroupIds.map((id) => {
     label: configured.label ?? (id === "other" ? "其他项目" : id),
     description: configured.description ?? "尚未归入预设分类的项目",
     projects: projects.filter((project) => project.group === id),
+    home: `groups/${id}/index.html`,
   };
 });
 
@@ -370,26 +369,39 @@ function renderMarkdown(note) {
 
 for (const note of notes) renderMarkdown(note);
 
-function projectNavigation(currentOutput, currentProjectName, currentNoteOutput) {
+function projectNavigation(
+  currentOutput,
+  currentProjectName,
+  currentNoteOutput,
+  currentGroupId,
+) {
+  const activeGroupId =
+    currentGroupId || projectByName.get(currentProjectName)?.group || "";
   return projectGroups
     .map((group) => {
-      const items = group.projects
-        .map((project) => {
-          const projectHref = relativeHref(currentOutput, project.home);
-          const isProjectActive = project.name === currentProjectName;
-          const docs = isProjectActive
-            ? `<div class="project-docs">${project.docs
-                .map((doc) => {
-                  const active = doc.outputRelative === currentNoteOutput;
-                  return `<a class="doc-link${active ? " is-active" : ""}" href="${relativeHref(currentOutput, doc.outputRelative)}"${active ? ' aria-current="page"' : ""}>${escapeHtml(doc.title)}</a>`;
-                })
-                .join("")}</div>`
-            : "";
-          return `<div class="project-nav-item"><a class="project-link${isProjectActive ? " is-active" : ""}" href="${projectHref}"><span>${escapeHtml(project.label)}</span><span class="nav-count">${project.docs.length}</span></a>${docs}</div>`;
-        })
-        .join("");
+      const isGroupActive = group.id === activeGroupId;
+      const items = isGroupActive
+        ? group.projects
+            .map((project) => {
+              const projectHref = relativeHref(currentOutput, project.home);
+              const isProjectActive = project.name === currentProjectName;
+              const docs = isProjectActive
+                ? `<div class="project-docs">${project.docs
+                    .map((doc) => {
+                      const active = doc.outputRelative === currentNoteOutput;
+                      return `<a class="doc-link${active ? " is-active" : ""}" href="${relativeHref(currentOutput, doc.outputRelative)}"${active ? ' aria-current="page"' : ""}>${escapeHtml(doc.title)}</a>`;
+                    })
+                    .join("")}</div>`
+                : "";
+              return `<div class="project-nav-item"><a class="project-link${isProjectActive ? " is-active" : ""}" href="${projectHref}"><span>${escapeHtml(project.label)}</span><span class="nav-count">${project.docs.length}</span></a>${docs}</div>`;
+            })
+            .join("")
+        : "";
       return `<section class="project-nav-group">
-        <div class="project-nav-group-heading"><span>${escapeHtml(group.label)}</span><span>${group.projects.length}</span></div>
+        <a class="project-nav-group-heading${isGroupActive ? " is-active" : ""}" href="${relativeHref(currentOutput, group.home)}"${isGroupActive ? ' aria-current="true"' : ""}>
+          <span>${escapeHtml(group.label)}</span>
+          <span class="project-nav-group-meta"><span>${group.projects.length}</span><span aria-hidden="true">›</span></span>
+        </a>
         ${items}
       </section>`;
     })
@@ -422,6 +434,7 @@ function pageTemplate({
   description,
   currentProjectName = "",
   currentNoteOutput = "",
+  currentGroupId = "",
   headings = [],
   breadcrumbs = [],
   content,
@@ -470,8 +483,8 @@ function pageTemplate({
 
   <div class="site-layout">
     <aside class="sidebar" data-sidebar>
-      <div class="sidebar-heading">项目导航</div>
-      <nav aria-label="项目和文档">${projectNavigation(outputRelative, currentProjectName, currentNoteOutput)}</nav>
+      <div class="sidebar-heading">研究目录</div>
+      <nav aria-label="研究目录、项目和文档">${projectNavigation(outputRelative, currentProjectName, currentNoteOutput, currentGroupId)}</nav>
       <div class="sidebar-footer">
         <span>${projects.length} 个项目</span><span>${notes.length} 篇笔记</span>
       </div>
@@ -514,6 +527,7 @@ function pageTemplate({
 
 function notePage(note) {
   const project = projectByName.get(note.projectName);
+  const group = projectGroups.find((item) => item.id === project.group);
   const lead = `<header class="article-header">
     <div class="eyebrow">${escapeHtml(project.label)} · 源码阅读</div>
     <h1>${escapeHtml(note.title)}</h1>
@@ -527,6 +541,7 @@ function notePage(note) {
     currentNoteOutput: note.outputRelative,
     headings: note.headings,
     breadcrumbs: [
+      ...(group ? [{ label: group.label, href: group.home }] : []),
       { label: project.label, href: project.home },
       { label: note.title },
     ],
@@ -534,49 +549,53 @@ function notePage(note) {
   });
 }
 
+function projectCards(group, outputRelative) {
+  const projectIndex = new Map(
+    projects.map((project, index) => [project.name, index]),
+  );
+  return group.projects
+    .map((project) => {
+      const index = projectIndex.get(project.name) ?? 0;
+      const accent = ["violet", "blue", "green", "amber"][index % 4];
+      return `<article class="project-card project-selector accent-${accent}">
+        <div class="project-card-top">
+          <span class="project-index">${String(index + 1).padStart(2, "0")}</span>
+          <span class="project-count">${project.docs.length ? `${project.docs.length} 篇笔记` : "待研究"}</span>
+        </div>
+        <h2>${escapeHtml(project.label)}</h2>
+        <p>${escapeHtml(project.description)}</p>
+        <a class="project-card-action" href="${relativeHref(outputRelative, project.home)}">
+          <span>${project.docs.length ? "进入项目" : "查看项目"}</span><span aria-hidden="true">→</span>
+        </a>
+      </article>`;
+    })
+    .join("");
+}
+
 function homePage() {
   const totalWords = notes.reduce(
     (sum, note) => sum + stripMarkdown(note.markdown).length,
     0,
   );
-  const projectIndex = new Map(
-    projects.map((project, index) => [project.name, index]),
-  );
-  const groupedCards = projectGroups
-    .map((group) => {
-      const cards = group.projects
-        .map((project) => {
-          const index = projectIndex.get(project.name) ?? 0;
-          const accent = ["violet", "blue", "green", "amber"][index % 4];
-          const docLinks = project.docs
-            .slice(0, 4)
-            .map(
-              (doc) =>
-                `<a href="${doc.outputRelative}"><span>${escapeHtml(doc.title)}</span><span>→</span></a>`,
-            )
-            .join("");
-          const remaining =
-            project.docs.length > 4
-              ? `<span class="more-docs">另有 ${project.docs.length - 4} 篇笔记</span>`
-              : "";
-          return `<section class="project-card accent-${accent}">
-            <div class="project-card-top">
-              <span class="project-index">${String(index + 1).padStart(2, "0")}</span>
-              <span class="project-count">${project.docs.length} 篇</span>
-            </div>
-            <h2><a href="${project.home}">${escapeHtml(project.label)}</a></h2>
-            <p>${escapeHtml(project.description)}</p>
-            <div class="project-card-links">${docLinks}${remaining}</div>
-          </section>`;
-        })
-        .join("");
-      return `<section class="project-group" id="group-${escapeAttribute(group.id)}">
-        <header class="project-group-heading">
-          <div><span>${escapeHtml(group.label)}</span><strong>${group.projects.length} 个项目</strong></div>
-          <p>${escapeHtml(group.description)}</p>
-        </header>
-        <div class="project-grid">${cards}</div>
-      </section>`;
+  const directoryCards = projectGroups
+    .map((group, index) => {
+      const noteCount = group.projects.reduce(
+        (sum, project) => sum + project.docs.length,
+        0,
+      );
+      const accent = ["violet", "blue", "green", "amber"][index % 4];
+      return `<a class="directory-card accent-${accent}" href="${group.home}">
+        <div class="directory-card-top">
+          <span>${String(index + 1).padStart(2, "0")}</span>
+          <span>${group.projects.length} 个项目</span>
+        </div>
+        <h2>${escapeHtml(group.label)}</h2>
+        <p>${escapeHtml(group.description)}</p>
+        <div class="directory-card-footer">
+          <span>${noteCount} 篇笔记</span>
+          <strong>选择目录 <span aria-hidden="true">→</span></strong>
+        </div>
+      </a>`;
     })
     .join("");
   const content = `<section class="home-hero">
@@ -593,8 +612,8 @@ function homePage() {
       </div>
     </section>
     <section class="project-section">
-      <div class="section-heading"><div><span>PROJECT GROUPS</span><h2>按领域浏览</h2></div><p>先选择项目类型，再沿整体架构、调用链和核心抽象深入源码。</p></div>
-      <div class="project-groups">${groupedCards}</div>
+      <div class="section-heading"><div><span>RESEARCH DIRECTORY</span><h2>选择研究目录</h2></div><p>先进入一个研究领域，再从该目录中选择要阅读的开源项目。</p></div>
+      <div class="directory-grid">${directoryCards}</div>
     </section>`;
   return pageTemplate({
     outputRelative: "index.html",
@@ -605,9 +624,70 @@ function homePage() {
   });
 }
 
+function groupPage(group) {
+  const outputRelative = group.home;
+  const noteCount = group.projects.reduce(
+    (sum, project) => sum + project.docs.length,
+    0,
+  );
+  const content = `<section class="directory-hero">
+      <div class="eyebrow">RESEARCH DIRECTORY</div>
+      <h1>${escapeHtml(group.label)}</h1>
+      <p>${escapeHtml(group.description)}</p>
+      <div class="directory-summary"><span>${group.projects.length} 个项目</span><span>${noteCount} 篇笔记</span></div>
+    </section>
+    <section class="project-section directory-projects">
+      <div class="section-heading"><div><span>PROJECTS</span><h2>选择项目</h2></div><p>进入项目后，可通过左侧导航继续选择该项目下的源码笔记。</p></div>
+      <div class="project-grid">${projectCards(group, outputRelative)}</div>
+    </section>`;
+  return pageTemplate({
+    outputRelative,
+    title: group.label,
+    description: group.description,
+    currentGroupId: group.id,
+    breadcrumbs: [{ label: group.label }],
+    content,
+    pageKind: "group",
+  });
+}
+
+function emptyProjectPage(project) {
+  const group = projectGroups.find((item) => item.id === project.group);
+  const repoLink = project.repo
+    ? `<a class="empty-project-link" href="${escapeAttribute(project.repo)}">访问 GitHub 仓库 <span aria-hidden="true">↗</span></a>`
+    : "";
+  const content = `<article class="article">
+    <header class="article-header">
+      <div class="eyebrow">${escapeHtml(project.label)} · 源码阅读</div>
+      <h1>${escapeHtml(project.label)}</h1>
+      <p>${escapeHtml(project.description)}</p>
+    </header>
+    <section class="empty-project">
+      <span>NOTES PENDING</span>
+      <h2>该项目尚无源码阅读笔记</h2>
+      <p>项目已经收录，后续完成源码定位、调用链分析和运行验证后，笔记会显示在这里。</p>
+      ${repoLink}
+    </section>
+  </article>`;
+  return pageTemplate({
+    outputRelative: project.home,
+    title: project.label,
+    description: project.description,
+    currentProjectName: project.name,
+    breadcrumbs: [
+      ...(group ? [{ label: group.label, href: group.home }] : []),
+      { label: project.label },
+    ],
+    content,
+    pageKind: "project",
+  });
+}
+
 function sourceBreadcrumbs(source, displayPath) {
   const project = projectByName.get(source.projectName);
+  const group = projectGroups.find((item) => item.id === project?.group);
   return [
+    ...(group ? [{ label: group.label, href: group.home }] : []),
     project
       ? { label: project.label, href: project.home }
       : { label: source.projectName },
@@ -701,6 +781,16 @@ await fs.mkdir(outputRoot, { recursive: true });
 await fs.cp(assetsRoot, path.join(outputRoot, "assets"), { recursive: true });
 
 await fs.writeFile(path.join(outputRoot, "index.html"), homePage(), "utf8");
+for (const group of projectGroups) {
+  const outputPath = path.join(outputRoot, ...group.home.split("/"));
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
+  await fs.writeFile(outputPath, groupPage(group), "utf8");
+}
+for (const project of projects.filter((item) => item.docs.length === 0)) {
+  const outputPath = path.join(outputRoot, ...project.home.split("/"));
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
+  await fs.writeFile(outputPath, emptyProjectPage(project), "utf8");
+}
 for (const note of notes) {
   const outputPath = path.join(outputRoot, ...note.outputRelative.split("/"));
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
@@ -740,6 +830,7 @@ await fs.writeFile(
 
 const manifest = {
   generatedAt: new Date().toISOString(),
+  groups: projectGroups.length,
   projects: projects.length,
   notes: notes.length,
   sourceFiles: sourceFiles.size,
