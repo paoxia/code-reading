@@ -211,6 +211,15 @@
       "status": "active",
       "path": "code/financial-services",
       "notes": "研究Anthropic面向金融服务场景提供的Agent示例、工作流和参考实现"
+    },
+    {
+      "name": "better-harness",
+      "group": "coding-agents",
+      "repo": "https://github.com/QoderAI/better-harness",
+      "description": "Make your coding agents better at getting better",
+      "status": "active",
+      "path": "code/better-harness",
+      "notes": "研究Coding Agent工作流的证据采集、五维评估、修复闭环、报告生成和多宿主适配"
     }
   ]
 }
