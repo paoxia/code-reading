@@ -8,6 +8,11 @@
 > `packages/tui`。`packages/orchestrator` 的包描述明确标注为 experimental，本文只说明
 > 它的边界，不把它当成主运行时。
 
+相关专题：
+
+- [基于 pi 构建自有 Coding Agent：架构与实施方案](./build-your-own-coding-agent.md)
+- [大模型 API 差异适配](./model-api-adaptation.md)
+
 ## 1. 先给结论
 
 pi 最值得学习的不是某一个工具，而是它把 Coding Agent 拆成了三层：
