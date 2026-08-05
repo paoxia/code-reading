@@ -1,5 +1,7 @@
 # kimi-code 源码架构概览
 
+相关专题：[Windows、Linux 与 macOS 跨平台适配](./cross-platform-adaptation.md)
+
 > 上游仓库：`MoonshotAI/kimi-code`
 >
 > 源码版本：`main@bf8e967d5c5c5dd458acd3319031993b8c53a44c`

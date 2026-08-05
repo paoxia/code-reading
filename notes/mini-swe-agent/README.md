@@ -1,5 +1,7 @@
 # mini-swe-agent 架构与 Agent Loop
 
+相关专题：[Windows、Linux 与 macOS 跨平台适配](./cross-platform-adaptation.md)
+
 > 源码版本：`SWE-agent/mini-swe-agent main@38c01a19ed1a`
 >
 > 软件版本：`2.4.5`

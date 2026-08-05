@@ -1,5 +1,7 @@
 # OpenCode 源码架构与 Agent Harness 主链
 
+相关专题：[Windows、Linux 与 macOS 跨平台适配](./cross-platform-adaptation.md)
+
 > 源码版本：`anomalyco/opencode dev@d36a2d8981ba`
 >
 > 软件版本：`1.18.4`
