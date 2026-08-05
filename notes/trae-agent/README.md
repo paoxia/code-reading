@@ -1,5 +1,7 @@
 # trae-agent 源码架构概览
 
+相关专题：[Windows、Linux 与 macOS 跨平台适配](./cross-platform-adaptation.md)
+
 > 上游仓库：`bytedance/trae-agent`
 >
 > 源码版本：`main@e839e559ac61bdd0e057c375dd1dee391fee797d`

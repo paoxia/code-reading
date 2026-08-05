@@ -1,5 +1,7 @@
 # Continue CLI 架构与 Coding Agent 主循环
 
+相关专题：[Windows、Linux 与 macOS 跨平台适配](./cross-platform-adaptation.md)
+
 ## 1. 研究范围和版本
 
 - 上游仓库：`https://github.com/continuedev/continue`
@@ -396,4 +398,3 @@ CLI 带有数量较多的单元、集成、E2E 和 smoke tests，尤其覆盖：
 9. [`extensions/cli/src/services/ChatHistoryService.ts`](../../code/continue/extensions/cli/src/services/ChatHistoryService.ts)
 10. [`extensions/cli/src/compaction.ts`](../../code/continue/extensions/cli/src/compaction.ts)
 11. [`extensions/cli/src/services/MCPService.ts`](../../code/continue/extensions/cli/src/services/MCPService.ts)
-

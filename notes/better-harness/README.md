@@ -1,5 +1,7 @@
 # Better Harness 源码分析：用证据闭环审查 Coding Agent 工作流
 
+相关专题：[Windows、Linux 与 macOS 跨平台适配](./cross-platform-adaptation.md)
+
 > 上游仓库：[`QoderAI/better-harness`](../../code/better-harness/README.md)
 >
 > 源码版本：`main@1ad9642768881cf12b56cc6eadd71b7b28b1f8fd`
