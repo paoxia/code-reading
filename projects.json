@@ -1,7 +1,40 @@
 {
+  "groups": [
+    {
+      "id": "coding-agents",
+      "label": "Coding Agent",
+      "description": "直接面向代码阅读、修改、测试与终端协作的智能体"
+    },
+    {
+      "id": "agent-frameworks",
+      "label": "Agent 框架",
+      "description": "用于构建、编排和运行 Agent 应用的开发框架"
+    },
+    {
+      "id": "agent-platforms",
+      "label": "Agent 平台与助手",
+      "description": "面向长期运行、托管、多入口或个人场景的 Agent 系统"
+    },
+    {
+      "id": "ai-infrastructure",
+      "label": "AI 基础设施",
+      "description": "模型推理、服务化、协议转换与 API 网关"
+    },
+    {
+      "id": "foundations",
+      "label": "模型原理与基础",
+      "description": "经典模型架构、论文实现与基础原理"
+    },
+    {
+      "id": "ai-applications",
+      "label": "AI 应用与示例",
+      "description": "面向具体行业和业务场景的 AI 应用、工作流与参考实现"
+    }
+  ],
   "projects": [
     {
       "name": "spring-ai-alibaba",
+      "group": "agent-frameworks",
       "repo": "https://github.com/alibaba/spring-ai-alibaba",
       "description": "Agentic AI Framework for Java Developers",
       "status": "active",
@@ -10,6 +43,7 @@
     },
     {
       "name": "agentscope-java",
+      "group": "agent-frameworks",
       "repo": "https://github.com/agentscope-ai/agentscope-java",
       "description": "Build distributed, production-grade, long-running agents",
       "status": "active",
@@ -18,6 +52,7 @@
     },
     {
       "name": "annotated-transformer",
+      "group": "foundations",
       "repo": "https://github.com/harvardnlp/annotated-transformer",
       "description": "An annotated implementation of the Transformer paper",
       "status": "active",
@@ -26,6 +61,7 @@
     },
     {
       "name": "mini-swe-agent",
+      "group": "coding-agents",
       "repo": "https://github.com/SWE-agent/mini-swe-agent",
       "description": "A minimal AI software engineering agent",
       "status": "active",
@@ -34,6 +70,7 @@
     },
     {
       "name": "pi",
+      "group": "coding-agents",
       "repo": "https://github.com/earendil-works/pi",
       "description": "A self-extensible coding agent and agent harness",
       "status": "active",
@@ -42,6 +79,7 @@
     },
     {
       "name": "opencode",
+      "group": "coding-agents",
       "repo": "https://github.com/anomalyco/opencode",
       "description": "The open source coding agent",
       "status": "active",
@@ -49,7 +87,17 @@
       "notes": "研究完整终端Coding Agent的会话、工具、权限和扩展架构"
     },
     {
+      "name": "continue",
+      "group": "coding-agents",
+      "repo": "https://github.com/continuedev/continue",
+      "description": "Open-source coding agent",
+      "status": "active",
+      "path": "code/continue",
+      "notes": "研究开源Coding Agent的模型接入、上下文构建、工具执行和IDE集成"
+    },
+    {
       "name": "codex",
+      "group": "coding-agents",
       "repo": "https://github.com/openai/codex",
       "description": "A lightweight coding agent that runs in your terminal",
       "status": "active",
@@ -58,11 +106,120 @@
     },
     {
       "name": "sub2api",
+      "group": "ai-infrastructure",
       "repo": "https://github.com/Wei-Shaw/sub2api",
       "description": "An AI API gateway for managing and distributing subscription quotas",
       "status": "active",
       "path": "code/sub2api",
       "notes": "研究多租户AI API网关的鉴权、账号调度、协议转发、故障切换和计费闭环"
+    },
+    {
+      "name": "multica",
+      "group": "agent-platforms",
+      "repo": "https://github.com/multica-ai/multica",
+      "description": "An open-source managed agents platform",
+      "status": "active",
+      "path": "code/multica",
+      "notes": "研究托管式Agent平台的任务队列、本地Daemon、统一CLI适配、实时状态同步和多Agent协作"
+    },
+    {
+      "name": "openclaw",
+      "group": "agent-platforms",
+      "repo": "https://github.com/openclaw/openclaw",
+      "description": "Your own personal AI assistant. Any OS. Any Platform.",
+      "status": "active",
+      "path": "code/openclaw",
+      "notes": "研究常驻Gateway、渠道路由、Agent Runtime、插件系统、会话持久化和多Agent协作"
+    },
+    {
+      "name": "hermes-agent",
+      "group": "agent-platforms",
+      "repo": "https://github.com/NousResearch/hermes-agent",
+      "description": "The agent that grows with you",
+      "status": "active",
+      "path": "code/hermes-agent",
+      "notes": "研究多入口Agent内核、工具注册、Provider适配、长期记忆、消息网关和子Agent委托"
+    },
+    {
+      "name": "openmanus",
+      "group": "agent-platforms",
+      "repo": "https://github.com/FoundationAgents/OpenManus",
+      "description": "No fortress, purely open ground. OpenManus is Coming.",
+      "status": "active",
+      "path": "code/openmanus",
+      "notes": "研究通用Agent的循环、工具系统、规划执行、浏览器能力和多Agent协作"
+    },
+    {
+      "name": "langchain",
+      "group": "agent-frameworks",
+      "repo": "https://github.com/langchain-ai/langchain",
+      "description": "The agent engineering platform",
+      "status": "active",
+      "path": "code/langchain",
+      "notes": "研究Runnable组合、模型与工具抽象、基于LangGraph的Agent工厂、中间件和集成生态"
+    },
+    {
+      "name": "langgraph",
+      "group": "agent-frameworks",
+      "repo": "https://github.com/langchain-ai/langgraph",
+      "description": "Build resilient language agents as graphs",
+      "status": "active",
+      "path": "code/langgraph",
+      "notes": "研究StateGraph、Pregel执行引擎、Channel状态合并、Checkpoint、Interrupt和持久化工作流"
+    },
+    {
+      "name": "spring-ai",
+      "group": "agent-frameworks",
+      "repo": "https://github.com/spring-projects/spring-ai",
+      "description": "An Application Framework for AI Engineering",
+      "status": "active",
+      "path": "code/spring-ai",
+      "notes": "研究Spring风格模型抽象、ChatClient、Advisor链、工具调用、记忆、RAG、MCP和自动配置"
+    },
+    {
+      "name": "vllm",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/vllm-project/vllm",
+      "description": "A high-throughput and memory-efficient inference and serving engine for LLMs",
+      "status": "active",
+      "path": "code/vllm",
+      "notes": "研究V1多进程架构、统一调度器、连续批处理、KV Cache块管理、Prefix Caching、Model Runner、Attention Backend和分布式执行"
+    },
+    {
+      "name": "kimi-code",
+      "group": "coding-agents",
+      "repo": "https://github.com/MoonshotAI/kimi-code",
+      "description": "An AI coding agent that runs in your terminal",
+      "status": "active",
+      "path": "code/kimi-code",
+      "notes": "研究终端Coding Agent的会话循环、工具系统、上下文管理、子Agent并行协作、插件机制、TUI和ACP集成"
+    },
+    {
+      "name": "trae-agent",
+      "group": "coding-agents",
+      "repo": "https://github.com/bytedance/trae-agent",
+      "description": "LLM-based agent for general purpose software engineering tasks",
+      "status": "active",
+      "path": "code/trae-agent",
+      "notes": "研究模块化软件工程Agent架构、多模型适配、工具调用、交互式CLI、执行轨迹记录和Docker隔离运行"
+    },
+    {
+      "name": "financial-services",
+      "group": "ai-applications",
+      "repo": "https://github.com/anthropics/financial-services",
+      "description": "AI agent examples and workflows for financial services",
+      "status": "active",
+      "path": "code/financial-services",
+      "notes": "研究Anthropic面向金融服务场景提供的Agent示例、工作流和参考实现"
+    },
+    {
+      "name": "better-harness",
+      "group": "coding-agents",
+      "repo": "https://github.com/QoderAI/better-harness",
+      "description": "Make your coding agents better at getting better",
+      "status": "active",
+      "path": "code/better-harness",
+      "notes": "研究Coding Agent工作流的证据采集、五维评估、修复闭环、报告生成和多宿主适配"
     }
   ]
 }
