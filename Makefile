@@ -5,15 +5,57 @@ PROJECTS_FILE ?= projects.json
 DEPTH ?= 1
 PROJECT ?=
 JQ ?= jq
+NPM ?= npm
+HOST ?= 127.0.0.1
+PORT ?= 5173
+PREVIEW_PORT ?= 4173
 
-.PHONY: help clone clone-one status
+.PHONY: help install dev serve build preview site-check clone clone-one status
 
 help:
-	@echo "Usage:"
-	@echo "  make clone                 Clone every missing project (shallow by default)"
-	@echo "  make clone DEPTH=0         Clone every missing project with full history"
-	@echo "  make clone-one PROJECT=pi  Clone one project by name"
-	@echo "  make status                Show the local state of every configured project"
+	@echo "Code Reading"
+	@echo ""
+	@echo "Page:"
+	@echo "  make install                         Install locked frontend dependencies"
+	@echo "  make dev                             Start VitePress at http://127.0.0.1:5173"
+	@echo "  make dev HOST=0.0.0.0 PORT=8080      Start on a custom address"
+	@echo "  make build                           Build the static site into html/"
+	@echo "  make preview                         Preview the build at http://127.0.0.1:4173"
+	@echo "  make site-check                      Build and verify expected pages"
+	@echo ""
+	@echo "Source projects:"
+	@echo "  make clone                           Clone every missing project (shallow by default)"
+	@echo "  make clone DEPTH=0                   Clone every project with full history"
+	@echo "  make clone-one PROJECT=pi            Clone one project by name"
+	@echo "  make status                          Show every configured project's local state"
+
+install:
+	@command -v "$(NPM)" >/dev/null 2>&1 || { echo "[error] npm is required" >&2; exit 127; }
+	$(NPM) ci
+
+dev:
+	@command -v "$(NPM)" >/dev/null 2>&1 || { echo "[error] npm is required" >&2; exit 127; }
+	@test -d node_modules/vitepress || { echo "[error] dependencies are missing; run 'make install' first" >&2; exit 2; }
+	$(NPM) run dev -- --host "$(HOST)" --port "$(PORT)"
+
+serve: dev
+
+build:
+	@command -v "$(NPM)" >/dev/null 2>&1 || { echo "[error] npm is required" >&2; exit 127; }
+	@test -d node_modules/vitepress || { echo "[error] dependencies are missing; run 'make install' first" >&2; exit 2; }
+	$(NPM) run build
+
+preview:
+	@command -v "$(NPM)" >/dev/null 2>&1 || { echo "[error] npm is required" >&2; exit 127; }
+	@test -d node_modules/vitepress || { echo "[error] dependencies are missing; run 'make install' first" >&2; exit 2; }
+	@test -f html/index.html || { echo "[error] html/ is missing; run 'make build' first" >&2; exit 2; }
+	$(NPM) run preview -- --host "$(HOST)" --port "$(PREVIEW_PORT)"
+
+site-check: build
+	@test -f html/index.html
+	@test -f html/deer-flow/index.html
+	@test -f html/deepseek-harness/index.html
+	@echo "[ok] VitePress site and project pages were generated"
 
 clone:
 	@set -eu; \
