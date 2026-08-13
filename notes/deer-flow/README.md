@@ -4,6 +4,8 @@
 >
 > 研究范围：2.0 主线的全栈拓扑、Lead Agent、Middleware、Sandbox、Skills、Memory、Sub-Agent 与运行时持久化。旧版 Deep Research 实现位于 `1.x` 分支，与 2.0 不共享代码，不在本文范围内。
 
+进一步阅读：[DeerFlow 2.0 深度架构与执行链分析](./architecture.md)。
+
 ## 1. 定位与结论
 
 DeerFlow 2.0 不是单纯的研究工作流，而是一个面向分钟到小时级任务的全栈 SuperAgent harness。它以 LangChain `create_agent()` 和 LangGraph 状态/检查点能力为 Agent 内核，在外围补齐线程级文件系统、隔离执行、长期记忆、Skills、子 Agent、流式事件、Web UI 和消息渠道。

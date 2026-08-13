@@ -4,6 +4,8 @@
 >
 > 研究范围：Developer Preview 主线的 Cordis 插件架构、配置组合、Agent Loop、Session Event Log、能力接缝、运行 Preset 与扩展机制。
 
+进一步阅读：[DeepSeek Harness 深度架构与运行时分析](./architecture.md)。
+
 ## 1. 定位与结论
 
 DeepSeek Harness（CLI 命令为 `dsh`）不是“给 DeepSeek 模型套一组固定工具”的薄客户端，而是一套以插件组合 Agent Runtime 的 TypeScript monorepo。它 vendoring 了 Cordis 元框架，并把模型、Agent Loop、Session、Prompt、工具、文件系统、Shell、Sandbox、Sub-Agent、Web UI 与持久化都实现成可挂载插件。

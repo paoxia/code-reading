@@ -59,10 +59,18 @@ const groupMenu: DefaultTheme.NavItemWithChildren[] = catalog.groups.map((group)
     .map((project) => ({ text: project.name, link: `/${project.name}/` })),
 })).filter((group) => group.items.length > 0)
 
-const rewrites = Object.fromEntries(availableProjects.map((project) => [
-  `${project.name}/README.md`,
-  `${project.name}/index.md`,
-]))
+const rewrites = Object.fromEntries([
+  ...availableProjects.flatMap((project) =>
+    fs.readdirSync(path.join(notesDir, project.name))
+      .filter((name) => name.endsWith('.md'))
+      .map((name) => [
+        `notes/${project.name}/${name}`,
+        name === 'README.md'
+          ? `${project.name}/index.md`
+          : `${project.name}/${name}`,
+      ]),
+  ),
+])
 
 const projectByName = new Map(catalog.projects.map((project) => [project.name, project]))
 
@@ -75,6 +83,12 @@ function configureMarkdown(md: any) {
     const token = tokens[index]
     const hrefIndex = token.attrIndex('href')
     const href = hrefIndex >= 0 ? token.attrs[hrefIndex][1] : ''
+    const projectReadme = href.match(/^\.\.\/([^/]+)\/README(?:\.md)?(?:#(.*))?$/)
+    if (projectReadme && projectByName.has(projectReadme[1])) {
+      const [, projectName, anchor] = projectReadme
+      token.attrs[hrefIndex][1] = `/${projectName}/${anchor ? `#${anchor}` : ''}`
+      return defaultLinkOpen(tokens, index, options, env, self)
+    }
     const match = href.match(/^(?:\.\/)?\.\.\/\.\.\/code\/([^/]+)\/?(.*)$/)
 
     if (match) {
@@ -97,7 +111,16 @@ export default defineConfig({
   lang: 'zh-CN',
   title: 'Code Reading',
   description: '开源项目源码阅读与中文学习笔记',
-  srcDir: 'notes',
+  srcDir: '.',
+  srcExclude: [
+    'code/**',
+    'html/**',
+    'node_modules/**',
+    'README.md',
+    'AGENTS.md',
+    'CLAUDE.md',
+  ],
+  publicDir: '.vitepress/public',
   outDir: 'html',
   cleanUrls: true,
   rewrites,
