@@ -220,6 +220,24 @@
       "status": "active",
       "path": "code/better-harness",
       "notes": "研究Coding Agent工作流的证据采集、五维评估、修复闭环、报告生成和多宿主适配"
+    },
+    {
+      "name": "deer-flow",
+      "group": "agent-platforms",
+      "repo": "https://github.com/bytedance/deer-flow",
+      "description": "An open-source long-horizon SuperAgent harness",
+      "status": "active",
+      "path": "code/deer-flow",
+      "notes": "研究长时任务中的主Agent、子Agent、Skills、Memory、Sandbox与消息网关"
+    },
+    {
+      "name": "deepseek-harness",
+      "group": "coding-agents",
+      "repo": "https://github.com/deepseek-ai/DeepSeek-Harness",
+      "description": "A plugin-oriented agent harness powered by Cordis",
+      "status": "active",
+      "path": "code/deepseek-harness",
+      "notes": "研究基于Cordis的插件化Agent Harness、运行模式、工具、会话与扩展机制"
     }
   ]
 }

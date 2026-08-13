@@ -9,7 +9,8 @@
 ├── code/            # 克隆的项目源码（已忽略）
 ├── notes/           # 研究笔记
 │   └── {project}/   # 每个项目一个文件夹
-├── notes-site/      # HTML 知识站生成器
+├── .vitepress/      # VitePress 配置与主题
+├── package.json     # 笔记站依赖与本地命令
 └── html/            # 生成后的静态知识站
 ```
 
@@ -19,16 +20,15 @@
 2. 将项目克隆到 `code/` 目录
 3. 在 `notes/{project-name}/` 中记录研究笔记
 
-## 浏览 HTML 知识站
+## 浏览笔记站
 
-直接打开 [`html/index.html`](html/index.html)，可以按项目和文档浏览全部笔记、搜索正文，并从笔记跳转到带行号的源码视图。
+使用 VitePress 在浏览器中阅读渲染后的 Markdown，支持项目导航、全文搜索、代码高亮、文章目录和深色模式。
 
-更新 Markdown 后，在 `notes-site/` 目录执行：
+本地启动：
 
-```powershell
-npm install
-npm run build
-npm run check
+```bash
+make install
+make dev
 ```
 
-更详细的生成规则见 [`notes-site/README.md`](notes-site/README.md)。
+默认访问 `http://127.0.0.1:5173`。构建静态站点执行 `make build`，预览构建结果执行 `make preview`。使用 `make help` 查看端口覆盖和源码克隆等完整命令。
