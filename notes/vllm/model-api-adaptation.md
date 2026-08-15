@@ -14,6 +14,24 @@ OpenAI Chat handler 负责 chat template、multimodal content、sampling、SSE�
 
 Anthropic Messages handler 继承 `OpenAIServingChat`，先将 system、content blocks、image、tool choice/tools 转成内部 ChatCompletionRequest，再把响应、usage、stop reason 和流事件转回 Anthropic 格式（[`anthropic/serving.py`](../../code/vllm/vllm/entrypoints/anthropic/serving.py)）。Responses handler 则拥有独立 conversation context、Harmony/普通 parser、MCP tool 事件与 stateful response 逻辑（[`responses/serving.py`](../../code/vllm/vllm/entrypoints/openai/responses/serving.py)、[`context.py`](../../code/vllm/vllm/entrypoints/openai/responses/context.py)）。
 
+## 从 HTTP 协议到 Engine 的完整路径
+
+```text
+OpenAI/Anthropic request
+  → endpoint validation + model/LoRA resolution
+  → message/content conversion
+  → chat template / renderer
+  → tokenization + sampling params
+  → EngineClient.generate
+  → RequestOutput stream
+  → reasoning/tool parser
+  → protocol-specific SSE/full response
+```
+
+Renderer 决定 prompt 与 multimodal inputs，tool/reasoning parser 决定如何把模型文本解释成结构字段；二者必须与具体模型模板匹配。只切换 `--model` 而沿用错误 parser，HTTP 仍可能 200，但 tool calls 会退化成普通文本。
+
+客户端取消要传播到 Engine request，避免断开连接后继续占 GPU。非流式响应通常聚合相同 engine stream；usage、finish reason 和 logprobs 必须从最终 RequestOutput 计算。Responses stateful store 保存的是协议 conversation/response 状态，不等同于 KV cache，进程重启后的恢复语义也不同。
+
 ## 限制与风险
 
 - “API compatible”不等于服务能力完全一致；tool/reasoning 是否正确取决于所选模型、chat template 与 parser 配置。

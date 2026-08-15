@@ -14,6 +14,21 @@ LangChain 用“核心行为接口 + 标准消息/内容块 + provider 独立集
 
 provider 包负责剩余差异。例如 Anthropic 集成会在 Anthropic content blocks 与 LangChain 标准块之间转换，并保留 thinking、server tools、annotations 等专有数据（[`_compat.py`](../../code/langchain/libs/partners/anthropic/langchain_anthropic/_compat.py)）。
 
+## 调用、流式聚合与工具绑定
+
+`bind_tools()` 通常返回带 provider tool schema/config 的 Runnable，并不在 Core 中执行工具。调用链是 `invoke/stream → BaseChatModel` 的公共校验与 callbacks → provider `_generate/_stream` → `AIMessage`/`AIMessageChunk`。Agent 或 `ToolNode` 才读取 `tool_calls` 并执行。
+
+```text
+standard Messages + RunnableConfig
+  → BaseChatModel
+  → provider request lowering
+  → SDK/native stream
+  → AIMessageChunk merge
+  → AIMessage(tool_calls, invalid_tool_calls, usage_metadata)
+```
+
+chunk 合并不仅拼文本，还要按 index/id 合并 tool argument fragments 和 content blocks。JSON 无法解析的调用进入 `invalid_tool_calls`，不应伪装成空参数工具。callbacks、retry、rate limiter 和 cache 位于模型公共生命周期，但 provider SDK 自带 retry 可能再包一层；配置时要避免乘法式重试。
+
 ## 取舍
 
 - 统一的是可组合行为和常见语义，不是所有参数的最小公分母；专有能力仍通过 provider kwargs、content block extras 或专用中间件暴露。

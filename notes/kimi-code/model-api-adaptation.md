@@ -14,6 +14,22 @@ kimi-code 将模型适配集中在 `packages/kosong`：`ChatProvider` 规定统�
 
 静态 capability registry 按 wire 与模型名前缀描述 vision、tool use、thinking/effort 等能力。未知模型返回 `UNKNOWN_CAPABILITY`，检查保持非致命；Kimi wire 的能力由宿主 catalog/config 提供（[`capability-registry.ts`](../../code/kimi-code/packages/kosong/src/providers/capability-registry.ts)）。tool call id、reasoning key、相邻 user 消息合并等跨协议历史问题各有小型兼容模块。
 
+## 一次生成的状态机
+
+```text
+ProviderConfig → createProvider
+  → immutable withModel/withTools/withThinking...
+  → generate(messages, options)
+  → native request lowering
+  → native stream consumption
+  → StreamedMessage parts
+  → final usage + finishReason + rawFinishReason
+```
+
+不可变 `with...` 返回值使同一基础 provider 能安全派生不同 turn 配置；调用方若忽略返回对象，配置不会生效。流式 tool arguments 需要按 call id 累积，thinking/reasoning part 还可能携带 provider key/signature，必须在历史重放时保留。
+
+跨 provider 切换历史前要检查角色合并、tool result 引用与 reasoning key。Capability registry 只用于预检和 UI，不是 wire 层强制保证；最终仍应处理服务端 unsupported parameter。诊断时同时记录规范化 finish reason 与 `rawFinishReason`，否则会丢失 adapter 映射依据。
+
 ## 取舍
 
 - 统一输出同时保存 raw 值，兼顾易用和可诊断性。

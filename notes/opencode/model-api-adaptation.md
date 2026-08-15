@@ -12,6 +12,23 @@ Provider facade 组合认证、base URL、默认参数与一到多个 route。Op
 
 Protocol 模块是真正的转换边界。OpenAI Chat 和 Anthropic Messages 各自定义原生请求/事件 schema、把统一消息和工具 lowering 到 wire body、再把 SSE 增量解析成统一 lifecycle/tool/usage events（[`openai-chat.ts`](../../code/opencode/packages/llm/src/protocols/openai-chat.ts)、[`anthropic-messages.ts`](../../code/opencode/packages/llm/src/protocols/anthropic-messages.ts)）。工具 schema projection 和流式参数拼接是共享 utility。
 
+## Route 与统一事件状态机
+
+Provider 可同时提供多条 route，选择依据不只 provider 名，还包括模型能力、配置与 transport。例如 OpenAI Responses WebSocket 失败可选择其他 route，但已经产生事件后切换必须避免重复 output。Protocol parser 将原生事件归一为 start/delta/end、tool、usage 和 provider error，Session Runner 据此持久化 part。
+
+```text
+LLMRequest
+  → provider defaults/auth
+  → route selection
+  → protocol.lower(request)
+  → transport/SSE/WebSocket
+  → protocol.parse(events)
+  → LLMEvent
+  → Session Runner parts
+```
+
+`generateObject` 的合成工具方案要求目标模型可靠支持强制 tool choice；不支持时应显式失败或走其他策略，不能把文本 JSON 当已验证对象。流式 tool arguments、reasoning 和 usage 的 terminal event 顺序需要测试，因为 Session 持久化依赖完整 lifecycle。
+
 ## 取舍
 
 - 原生 schema 会严格暴露协议不兼容，而不是依赖 SDK 的宽松 `any`。

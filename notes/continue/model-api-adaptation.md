@@ -12,6 +12,22 @@ OpenAI 实现是基准路径，并能按模型和官方 endpoint 在 Chat Comple
 
 原生协议使用显式双向转换。Anthropic adapter 将 system 从 messages 拆出，把 OpenAI tools/tool choice、图片、tool calls/results 转成 Anthropic content blocks，并把 Anthropic SSE 事件、usage 和 stop reason拼回 OpenAI chunk（[`Anthropic.ts`](../../code/continue/packages/openai-adapters/src/apis/Anthropic.ts)）。Gemini adapter还处理 `assistant → model`、tool call id/name 对照、相邻角色合并与 thought signature（[`Gemini.ts`](../../code/continue/packages/openai-adapters/src/apis/Gemini.ts)）。
 
+## 请求与流事件的精确路径
+
+```text
+Continue LLM request
+  → BaseLlmApi method selection
+  → provider adapter request conversion
+  → fetch/SDK + abort signal
+  → SSE/native event parser
+  → OpenAI-compatible chunk
+  → upper-layer stream aggregation
+```
+
+Chat、completion、FIM、embedding 与 rerank 是不同方法，不存在一个 adapter 实现 chat 就自动支持其余能力。原生 adapter 还必须维护双向 tool call id 映射：assistant tool use 与之后的 tool result 若跨轮失配，服务通常会以角色/引用错误拒绝整段历史。
+
+流式解析要分别完成文本 delta、reasoning/thought、增量 JSON tool arguments、finish reason 和 usage。Anthropic/Gemini 的事件生命周期并不等价于 OpenAI chunk；adapter 只能在收到足够事件后合成某些字段。取消、半截 JSON、空 candidate 和 provider error 应保留为可诊断错误，不能被误聚合成正常 stop。
+
 ## 取舍
 
 - OpenAI 类型作为内部格式让上层简单，但对非 OpenAI 原生特性存在表达压力，需要 `extra_content` 等扩展字段。

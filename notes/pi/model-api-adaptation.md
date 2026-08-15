@@ -14,6 +14,23 @@ Anthropic Messages、OpenAI Chat Completions、OpenAI Responses、Codex Response
 
 模型 catalog 除价格和 context window 外，还携带 reasoning、input 类型、compat 和 thinking level mapping；`streamSimple` 将统一 reasoning 等级钳制/映射到各 API 原生字段。旧的全局 API registry 被保留在兼容入口，支持扩展注册自定义 wire API（[`compat.ts`](../../code/pi/packages/ai/src/compat.ts)）。
 
+## 统一事件的生命周期
+
+```text
+Model(provider, api, id, compat)
+  + Context(messages, tools)
+  + options
+  → Models 按 api 选择 StreamFunction
+  → provider request lowering
+  → SDK/fetch event stream
+  → start / text|thinking|toolcall delta / usage / done|error
+  → AssistantMessageEventStream.result()
+```
+
+上层既可逐事件渲染，也可等待最终 `AssistantMessage`。适配器必须保证 terminal event 唯一，并在工具参数流结束前完成 JSON 聚合。thinking signature、tool call id 和 provider-specific metadata 属于后续历史重放需要的数据，不能只留在 UI event。
+
+`streamSimple` 负责将统一 thinking level 映射到模型支持范围，并做常见 options 简化；直接调用底层 stream function 则由调用方承担完整协议参数。自定义 API 注册既要提供 stream 实现，也应补 model catalog/compat，否则能力预检、token 价格和输入类型会缺失。
+
 ## 取舍
 
 - 分离 provider、model 与 wire API，扩展性强，也能精确保存厂商特性。

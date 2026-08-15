@@ -14,6 +14,21 @@ Google 示例通过 Gemini 的 OpenAI-compatible endpoint 接入，Azure 示例�
 
 `BedrockClient` 仿造 OpenAI client 对象，将 OpenAI messages/tools 转成 Converse 请求，再把完整或流式结果聚合回 ChatCompletion 风格对象（[`bedrock.py`](../../code/openmanus/app/bedrock.py)）。实现用模块级 `CURRENT_TOOLUSE_ID` 关联 tool result，且只显式读取首个 assistant tool call、对 content block index 有固定假设；这是源码中的临时方案和并发/并行工具限制，不应视为无损适配。
 
+## 请求路径与并发风险
+
+```text
+LLM config section
+  → LLM.__init__ client selection
+  → message normalization / token check
+  → chat.completions.create(stream?)
+  → tool call / text / usage aggregation
+  → Agent response
+```
+
+Azure 的 deployment/model 与 API version、默认 OpenAI-compatible 的 base URL/key、Bedrock 的 region/credential 是互斥配置面。reasoning 模型分支会改参数集合；若模型名未命中硬编码判断，服务可能收到不支持的 `temperature` 或错误 token 字段。
+
+Bedrock shim 的模块级 `CURRENT_TOOLUSE_ID` 是跨请求共享状态：并发请求或同轮多个工具可能覆盖关联。它也只处理部分 content block/tool call 形态，所以需要把这条路径标为受限兼容，而非与 AsyncOpenAI 等价。流式失败后若已有 chunk，不应无条件重试整个请求。
+
 ## 取舍
 
 - 单一 Chat Completions 调用面实现简单，任何真正兼容的网关都可通过 base URL 接入。

@@ -14,6 +14,23 @@ Multica 的主 Agent 运行时不直接统一 OpenAI、Anthropic 等模型 wire 
 
 `server/pkg/llm.Client` 只服务标题生成等不需要完整 Agent runtime 的轻量调用。它封装官方 OpenAI Go SDK，允许替换 base URL、API key、默认模型和重试，暴露 Chat、ChatStream 与 GenerateText；兼容范围明确停留在 OpenAI Chat Completions 协议（[`client.go`](../../code/multica/server/pkg/llm/client.go)）。没有 Anthropic Messages、Gemini 原生协议或统一 provider capability 转换。
 
+## 两层事件归一化不要混淆
+
+```text
+用户任务
+  → agent Backend (Claude/Codex/OpenCode/Kimi CLI)
+  → 宿主原生 stream/JSON-RPC/ACP
+  → Multica Session.Messages / Result
+
+标题等辅助任务
+  → pkg/llm Client
+  → OpenAI Chat Completions-compatible endpoint
+```
+
+第一条链归一的是完整 Agent 事件，tool use 已由外部 CLI 产生或执行；第二条链才是直接 LLM 请求，没有 Coding Agent 工具循环。两者的 model 名、usage 和错误不能放进同一统计口径。Codex backend 的 app-server request id/thread id 与 Claude stream-json session id 也有不同恢复合同。
+
+CLI 子进程退出、协议解析失败、Agent turn 失败与底层模型拒绝是不同错误层。Multica 通常只能可靠识别宿主暴露的错误；若宿主丢失 provider 原始 code，不应在上层臆测为 rate limit。
+
 ## 取舍
 
 - 复用成熟 CLI 可继承其 OAuth、模型发现和工具协议，Multica 不必重复实现每家模型 API。

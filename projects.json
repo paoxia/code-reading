@@ -238,6 +238,51 @@
       "status": "active",
       "path": "code/deepseek-harness",
       "notes": "研究基于Cordis的插件化Agent Harness、运行模式、工具、会话与扩展机制"
+    },
+    {
+      "name": "openhands",
+      "group": "agent-platforms",
+      "repo": "https://github.com/OpenHands/OpenHands",
+      "description": "An open platform for AI software developers",
+      "status": "active",
+      "path": "code/openhands",
+      "notes": "研究完整软件开发Agent平台的运行时、事件流、沙箱、会话与多入口架构"
+    },
+    {
+      "name": "swe-agent",
+      "group": "coding-agents",
+      "repo": "https://github.com/SWE-agent/SWE-agent",
+      "description": "An agent that fixes GitHub issues using language models",
+      "status": "active",
+      "path": "code/swe-agent",
+      "notes": "研究benchmark驱动的软件修复Agent、Agent-Computer Interface、轨迹与评测闭环"
+    },
+    {
+      "name": "gemini-cli",
+      "group": "coding-agents",
+      "repo": "https://github.com/google-gemini/gemini-cli",
+      "description": "An open-source AI agent for the terminal",
+      "status": "active",
+      "path": "code/gemini-cli",
+      "notes": "研究Google终端Coding Agent的循环、工具、策略、沙箱、扩展与模型接入"
+    },
+    {
+      "name": "goose",
+      "group": "coding-agents",
+      "repo": "https://github.com/aaif-goose/goose",
+      "description": "An open-source extensible AI agent",
+      "status": "active",
+      "path": "code/goose",
+      "notes": "研究MCP-first本地Agent的扩展、Recipe、会话、工具调用与多模型适配"
+    },
+    {
+      "name": "aider",
+      "group": "coding-agents",
+      "repo": "https://github.com/Aider-AI/aider",
+      "description": "AI pair programming in your terminal",
+      "status": "active",
+      "path": "code/aider",
+      "notes": "研究代码编辑格式、Repository Map、上下文选择、Git工作流与模型适配"
     }
   ]
 }

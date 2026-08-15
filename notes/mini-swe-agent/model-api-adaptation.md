@@ -12,6 +12,22 @@ mini-swe-agent 选择把广泛的厂商差异委托给 LiteLLM、OpenRouter、Po
 
 项目仍保留少量 provider 补丁：Anthropic thinking blocks 在重放前重新排序，并默认在 Anthropic/Claude 模型上设置 cache control；OpenAI 多模态内容和工具结果也有专用格式化辅助（[`anthropic_utils.py`](../../code/mini-swe-agent/src/minisweagent/models/utils/anthropic_utils.py)、[`openai_multimodal.py`](../../code/mini-swe-agent/src/minisweagent/models/utils/openai_multimodal.py)）。
 
+## Query 到轨迹的边界
+
+```text
+Agent history/action format
+  → Model.format_messages / format_tool_result
+  → LitellmModel.query
+  → litellm.completion
+  → response + tool_calls + usage/cost
+  → Agent action
+  → raw response retained in trajectory
+```
+
+格式化方法是适配合同的一部分：同一 observation 在文本 action、OpenAI tool result 与 Anthropic content block 路径中形状不同。Provider 补丁在历史发送前执行，尤其 Anthropic thinking block 的顺序与 cache-control；它们不是结果出来后的展示修饰。
+
+LiteLLM retry、模型类 retry 和 benchmark 外层 retry 可能叠加，实验统计应记录实际请求次数与总成本。未知模型的 cost lookup 失败不应覆盖真实模型响应；反之忽略 cost 也不能在报告中声称预算准确。
+
 ## 取舍
 
 - 实现小、覆盖面大，但支持范围和参数翻译质量受 LiteLLM/网关版本影响。

@@ -14,6 +14,22 @@ Spring AI 采用典型的 Port/Adapter 架构：`spring-ai-model` 定义统一�
 
 工具执行也被上移到统一的 `ToolCallingManager`，provider 适配器只负责声明和识别调用；可观测性统一成 `ChatModelObservationContext`，但仍记录实际 `AiProvider`。
 
+## 公共生命周期与工具边界
+
+```text
+Prompt(messages, ChatOptions)
+  → ChatModel / StreamingChatModel
+  → provider options merge
+  → request/message/tool conversion
+  → SDK/HTTP
+  → ChatResponse or Flux<ChatResponse>
+  → observation + ToolCallingManager / ChatClient
+```
+
+Provider options 的 merge 通常是“请求级覆盖模型默认值”，但具体类还可能包含 mutually exclusive 字段。流式实现需要把多个原生事件聚合为 `Generation`、`AssistantMessage` 和 usage metadata；usage 只在末尾出现的 provider 不能在每个 chunk 伪造累计值。
+
+`ToolCallingManager` 执行客户端工具，但 Anthropic server tools、OpenAI hosted tools 等可能在服务端运行。适配器必须正确区分需要本地 dispatch 的 tool call 与 provider 已执行的结果。Observation/callback 可以统一采集延迟和 token，却仍应保留 `AiProvider` 与原生 response metadata 供故障分析。
+
 ## 取舍
 
 - 公共 options 是交集，推理、缓存、原生搜索等特性需使用 `OpenAiChatOptions`、`AnthropicChatOptions` 等专属类型。

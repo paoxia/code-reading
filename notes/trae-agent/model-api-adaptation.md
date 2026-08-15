@@ -14,6 +14,21 @@ Trae Agent 使用统一 DTO 与抽象基类，再按 provider 选择具体 clien
 
 Anthropic 与 Google client 分别把统一消息/工具转换为各自 SDK 对象，再把 content、tool calls、finish reason 和 usage 映射回 `LLMResponse`（[`anthropic_client.py`](../../code/trae-agent/trae_agent/utils/llm_clients/anthropic_client.py)、[`google_client.py`](../../code/trae-agent/trae_agent/utils/llm_clients/google_client.py)）。
 
+## 历史所有权与重试
+
+```text
+LLMClient facade
+  → provider client.chat(messages, tools)
+  → request conversion
+  → SDK complete response
+  → LLMResponse(text, tool_calls, usage)
+  → append provider-neutral history
+```
+
+当前接口以完整响应为单位，tool call arguments 不需要处理增量 chunk，但长响应直到结束前不可展示。`OpenAICompatibleClient` 同时拥有请求重试和 history 追加；只有成功解析的 assistant response 才应写入 history，否则 retry 会重复 user message 或留下半轮。
+
+Anthropic/Google 路径对 system、tool result 和相邻角色有独立约束。统一 `LLMMessage` 能表达交集，但 provider-specific safety/reasoning metadata 可能丢失。新增 provider 时应先判断能否继承 OpenAI compatible；只有 endpoint/body 小差异适合 `ProviderConfig`，原生 content/event 需要新 client。
+
 ## 取舍
 
 - 策略直观，新增 OpenAI-compatible provider 成本较低。

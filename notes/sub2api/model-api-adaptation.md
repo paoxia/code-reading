@@ -14,6 +14,23 @@ Anthropic 账号承接 Responses 请求时，`ForwardAsResponses` 将请求转�
 
 Bedrock 不是简单更换 base URL：它单独构造 InvokeModel/stream 请求、执行 AWS 签名或 Bearer 鉴权，并转换 Bedrock 指标和事件（[`gateway_bedrock.go`](../../code/sub2api/backend/internal/service/gateway_bedrock.go)）。Anthropic OAuth 账号还会注入 Claude Code 兼容 system、metadata 和 cache-control，这属于账号协议约束，而非一般模型能力。
 
+## 流式转换状态机与 Failover 窗口
+
+```text
+client protocol request
+  → API key/group/model mapping
+  → candidate account selection + concurrency lease
+  → request protocol bridge
+  → upstream streaming request
+  → SSE state machine / usage conversion
+  → client protocol response
+  → accounting + lease release
+```
+
+在写出客户端 status/header/首个 SSE event 前，401/403/429/部分 5xx 可释放候选并换账号；提交响应后再切换会把两个上游流拼在一起，所以只能终止当前流。非流式客户端走“上游始终 streaming、网关聚合”的路径，也要在聚合完成前保留同样的 failover 边界。
+
+Responses SSE 具有 response.created、output item/content part、delta、completed 等有序事件；Anthropic 则是 message/content block 生命周期。桥接必须保存每个 tool call/content block 的 index 与 id，并在终止时统一 stop reason/usage。漏掉 terminal event 会让 SDK 永久等待，重复 terminal event 则破坏计费和重试判断。
+
 ## 取舍与风险
 
 - 以 Responses 作为 Chat 与 Anthropic 间的中间层减少重复转换，但协议不等价；新增字段必须同步维护请求、完整响应和 SSE 状态机。
