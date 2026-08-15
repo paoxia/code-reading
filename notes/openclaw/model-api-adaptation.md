@@ -16,6 +16,22 @@ OpenClaw 将 provider、model 与 wire API 分开建模，并通过统一 `Model
 
 对于共享 wire API 的厂商，wrapper 只修改必要差异：OpenAI wrapper 处理 reasoning effort、Responses/Chat 选择等行为，Google wrapper 处理 Gemini thinking payload；Anthropic-family 还单独修补 tool payload 与 cache semantics（[`openai.ts`](../../code/openclaw/src/llm/providers/stream-wrappers/openai.ts)、[`google.ts`](../../code/openclaw/src/llm/providers/stream-wrappers/google.ts)、[`anthropic-family-tool-payload-compat.ts`](../../code/openclaw/src/llm/providers/stream-wrappers/anthropic-family-tool-payload-compat.ts)）。
 
+## 解析、绑定与流式包装顺序
+
+```text
+model reference
+  → catalog/local/plugin merge
+  → resolved Model(provider, api, compat, capabilities)
+  → auth/runtime binding
+  → base stream implementation
+  → provider-family wrappers
+  → AssistantMessageEventStream
+```
+
+顺序很重要：catalog 决定模型身份和默认能力，provider plugin 决定 auth/runtime，stream wrapper 才修补请求与历史。过早按 base URL 推断 API 会覆盖插件选择；多个 wrapper 重复修改 tool payload 或 thinking 参数则会产生双重转换。
+
+统一事件流需要在结束前合并 text/thinking/tool calls/usage，并保留可回放的 provider metadata。取消或中途错误不能产出伪造 complete message。Bedrock/Vertex 等插件的 discovery 失败应允许静态配置继续工作，但不能把“目录不可用”误报为“凭据一定无效”。
+
 ## 取舍
 
 - 分离 catalog、auth、transport 和 replay policy，既可复用协议实现，又能让云平台保留原生能力。

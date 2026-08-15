@@ -16,6 +16,22 @@ Anthropic adapter 负责 OpenAI 消息/工具与 Messages content blocks 的双�
 
 辅助任务仍统一调用 `client.chat.completions.create()`；`auxiliary_client` 为 Codex Responses、Anthropic Messages 和 Bedrock Converse 提供 shim，并在 auto 模式按主 provider、OpenRouter、Nous、Anthropic 等顺序选择或因额度错误降级（[`auxiliary_client.py`](../../code/hermes-agent/agent/auxiliary_client.py)）。
 
+## 选择路径与降级顺序
+
+```text
+provider profile + credential mode + model
+  → agent_init client selection
+  ├─ OpenAI SDK compatible path
+  ├─ Anthropic native adapter
+  ├─ Bedrock Claude / Converse adapter
+  └─ Codex Responses adapter
+  → OpenAI-shaped response for Agent loop
+```
+
+Provider profile 的 request hook 只能修补 endpoint/header/body；若 wire event 和历史结构不同，必须进入原生 adapter。主循环 client 与 auxiliary client 是两条调用路径：后者为标题、摘要等任务提供 shim/fallback，其模型选择、额度降级和错误策略不能反向推断主循环行为。
+
+Bedrock 的 streaming 权限不足可以降级到非流式，但 credential failure、模型不存在和内容策略拒绝不能作为同类重试。Anthropic thinking block 还携带 signature，历史回放时顺序和签名必须保留；简单抽取成文本会破坏后续请求。
+
 ## 取舍
 
 - 统一 OpenAI 风格调用面让 Agent loop 简单，同时原生 adapter 可保留 caching、thinking、AWS auth 等能力。

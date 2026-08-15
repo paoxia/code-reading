@@ -10,6 +10,22 @@ Spring AI Alibaba 没有在 Agent 运行时重新定义一套模型协议，而�
 
 Admin 层使用工厂注册表做 provider 分派。`ChatClientFactoryDelegate` 目前显式注册 OpenAI、DashScope、DeepSeek 三个工厂，根据模型配置中的 `provider` 选择工厂；每个工厂分别构造厂商 `ChatModel` 和对应的 `ChatOptions`，最后统一包装成 `ChatClient`（[`ChatClientFactory.java`](../../code/spring-ai-alibaba/spring-ai-alibaba-admin/spring-ai-alibaba-admin-server-start/src/main/java/com/alibaba/cloud/ai/studio/admin/service/client/ChatClientFactory.java)、[`ChatClientFactoryDelegate.java`](../../code/spring-ai-alibaba/spring-ai-alibaba-admin/spring-ai-alibaba-admin-server-start/src/main/java/com/alibaba/cloud/ai/studio/admin/service/client/ChatClientFactoryDelegate.java)）。用户参数覆盖模型默认参数，provider 专属参数则留在各工厂内。
 
+## Admin 到 Agent 节点的装配链
+
+```text
+provider/model configuration
+  → ChatClientFactoryDelegate
+  → provider-specific ChatClientFactory
+  → ChatModel + matching ChatOptions
+  → ChatClient
+  → AgentLlmNode
+  → Spring AI ChatResponse / Flux
+```
+
+Factory 合并默认 options 与用户覆盖时必须保持具体类型匹配，例如不能把 DashScope options 当 OpenAI options 反射写入。Fallback interceptor 切换 `ChatModel` 前还要处理原模型专属 options；共同字段可以保留，专属字段不能假装自动翻译。
+
+流式 Agent 节点依赖 Spring AI `Flux<ChatResponse>` 的取消与错误语义。provider 在首个 chunk 前失败可以安全 fallback；已经向 graph state 写入部分 assistant/tool call 后再切模型可能重复输出，因此 fallback 条件必须结合是否已产生可见结果。
+
 ## 差异边界与注意事项
 
 - 统一的是上层调用形态，不保证所有 provider 的参数和能力完全等价；具体消息转换、工具调用和流式事件仍由 Spring AI 模型实现决定。

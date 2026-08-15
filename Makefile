@@ -59,8 +59,6 @@ site-check: build
 
 clone:
 	@set -eu; \
-	depth_args=""; \
-	if [ "$(DEPTH)" != "0" ]; then depth_args="--depth $(DEPTH)"; fi; \
 	$(JQ) -r '.projects[] | [.name, .repo, .path] | @tsv' "$(PROJECTS_FILE)" | \
 	while IFS="$$(printf '\t')" read -r name repo path; do \
 		if [ -d "$$path/.git" ]; then \
@@ -72,15 +70,17 @@ clone:
 			echo "[clone] $$name -> $$path"; \
 			mkdir -p "$$(dirname "$$path")"; \
 			rm -f "$$path/.gitkeep"; \
-			git clone $$depth_args -- "$$repo" "$$path"; \
+			if [ "$(DEPTH)" = "0" ]; then \
+				git clone -- "$$repo" "$$path"; \
+			else \
+				git clone --depth "$(DEPTH)" -- "$$repo" "$$path"; \
+			fi; \
 		fi; \
 	done
 
 clone-one:
 	@if [ -z "$(PROJECT)" ]; then echo "PROJECT is required, for example: make clone-one PROJECT=pi" >&2; exit 2; fi
 	@set -eu; \
-	depth_args=""; \
-	if [ "$(DEPTH)" != "0" ]; then depth_args="--depth $(DEPTH)"; fi; \
 	project="$$( $(JQ) -er --arg name "$(PROJECT)" '.projects[] | select(.name == $$name) | [.repo, .path] | @tsv' "$(PROJECTS_FILE)" )" || { echo "Unknown project: $(PROJECT)" >&2; exit 2; }; \
 	IFS="$$(printf '\t')"; set -- $$project; repo="$$1"; path="$$2"; \
 	if [ -d "$$path/.git" ]; then \
@@ -89,7 +89,11 @@ clone-one:
 		echo "[error] $(PROJECT): $$path exists and is not empty" >&2; exit 1; \
 	else \
 		mkdir -p "$$(dirname "$$path")"; rm -f "$$path/.gitkeep"; \
-		git clone $$depth_args -- "$$repo" "$$path"; \
+		if [ "$(DEPTH)" = "0" ]; then \
+			git clone -- "$$repo" "$$path"; \
+		else \
+			git clone --depth "$(DEPTH)" -- "$$repo" "$$path"; \
+		fi; \
 	fi
 
 status:

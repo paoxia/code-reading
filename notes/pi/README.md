@@ -51,7 +51,7 @@ coding-agent         产品层：CLI/TUI、配置、扩展、内置工具、认�
 根 [`package.json`](../../code/pi/package.json) 的构建顺序直接表达了依赖方向：
 
 ```text
-pi-tui → pi-ai → pi-agent-core → pi-coding-agent → pi-orchestrator
+pi-tui → pi-ai → pi-agent-core → storage/protocol/client → pi-coding-agent → pi-server
 ```
 
 | 包 | 核心职责 | 关键入口 |
@@ -60,7 +60,8 @@ pi-tui → pi-ai → pi-agent-core → pi-coding-agent → pi-orchestrator
 | `packages/agent` | 通用 Agent Loop、`Agent`、新 `AgentHarness` | [`src/agent-loop.ts`](../../code/pi/packages/agent/src/agent-loop.ts)、[`src/agent.ts`](../../code/pi/packages/agent/src/agent.ts) |
 | `packages/coding-agent` | Coding Agent 产品能力、工具、会话、扩展、CLI/TUI/RPC | [`src/main.ts`](../../code/pi/packages/coding-agent/src/main.ts)、[`src/core/sdk.ts`](../../code/pi/packages/coding-agent/src/core/sdk.ts) |
 | `packages/tui` | 终端组件和差量渲染 | [`src`](../../code/pi/packages/tui/src) |
-| `packages/orchestrator` | 实验性编排包 | [`README.md`](../../code/pi/packages/orchestrator/README.md) |
+| `packages/storage` | Session 等持久化后端 | [`storage`](../../code/pi/packages/storage) |
+| `packages/protocol` / `client` / `server` | 服务协议、客户端与服务端入口 | [`protocol`](../../code/pi/packages/protocol)、[`client`](../../code/pi/packages/client)、[`server`](../../code/pi/packages/server) |
 
 这个拆分让 `packages/agent` 不知道文件编辑器、终端 UI 或具体 Provider；`coding-agent`
 则把通用内核产品化。
@@ -295,11 +296,11 @@ Provider turn。这是实现可重入 Harness 时最值得借鉴的模式。
 ## 6. Session：追加日志加树形游标
 
 [`Session`](../../code/pi/packages/agent/src/harness/session/session.ts) 并不直接绑定文件，而是
-依赖 `SessionStorage`。仓库提供：
+依赖 `SessionStorage`。仓库当前提供：
 
-- [`InMemorySessionStorage`](../../code/pi/packages/agent/src/harness/session/memory-storage.ts)；
-- [`JsonlSessionStorage`](../../code/pi/packages/agent/src/harness/session/jsonl-storage.ts)；
-- 对应的内存与 JSONL Repo，用于 create/open/list/delete/fork。
+- [`InMemorySessionBackend` / `InMemorySessionRepository`](../../code/pi/packages/agent/src/harness/session/memory-repo.ts)；
+- [`JsonlSessionBackend` / `JsonlSessionRepository`](../../code/pi/packages/agent/src/harness/session/jsonl-repo.ts)；
+- Repository 负责 create/open/list/delete/fork，Backend/Storage 负责具体 entry 读写。
 
 每个 entry 有 `id`、`parentId`、`timestamp`，类型包括：
 
@@ -454,7 +455,7 @@ npm --prefix packages/agent run test:harness
 | steer/follow-up 队列、安全点 | [`agent-harness.test.ts`](../../code/pi/packages/agent/test/harness/agent-harness.test.ts) |
 | Provider options 与 Hook 链 | [`agent-harness-stream.test.ts`](../../code/pi/packages/agent/test/harness/agent-harness-stream.test.ts) |
 | Session 树和持久 leaf | [`session.test.ts`](../../code/pi/packages/agent/test/harness/session.test.ts) |
-| JSONL 恢复 | [`storage.test.ts`](../../code/pi/packages/agent/test/harness/storage.test.ts) |
+| JSONL 恢复与后端一致性 | [`session-backends.test.ts`](../../code/pi/packages/agent/test/harness/session-backends.test.ts) |
 | 工具顺序/并发/终止 | [`agent-loop.test.ts`](../../code/pi/packages/agent/test/agent-loop.test.ts) |
 
 最有价值的调试点依次是：

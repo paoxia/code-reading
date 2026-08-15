@@ -14,6 +14,23 @@ AgentScope Java 采用“核心中立模型 + 独立扩展模块 + Formatter”�
 
 以 OpenAI 模块为例，`OpenAIChatModel` 把统一消息交给 `Formatter`，再构造请求、附加 tools/options/tool choice，最后把普通响应或 SSE chunk 解析回 `ChatResponse`。标准 OpenAI、DeepSeek、GLM 等可复用同一 HTTP 客户端，通过不同 Formatter 修补消息与参数差异（[`OpenAIChatModel.java`](../../code/agentscope-java/agentscope-extensions/agentscope-extensions-model/agentscope-extensions-model-openai/src/main/java/io/agentscope/extensions/model/openai/OpenAIChatModel.java)、[`OpenAIBaseFormatter.java`](../../code/agentscope-java/agentscope-extensions/agentscope-extensions-model/agentscope-extensions-model-openai/src/main/java/io/agentscope/extensions/model/openai/formatter/OpenAIBaseFormatter.java)）。Anthropic、Gemini、DashScope、Ollama 则有各自模型扩展，而不是强行伪装成一种 wire protocol。
 
+## 完整调用链与失败边界
+
+```text
+Model.builder / SPI provider
+  → ChatModelBase.stream(Msg, ToolSchema, GenerateOptions)
+  → tracing + timeout/retry
+  → concrete doStream
+  → Formatter lowering
+  → HTTP/SDK stream
+  → Formatter response/chunk mapping
+  → Flux<ChatResponse>
+```
+
+同步调用本质上聚合 stream，因此 chunk 中的 tool call 参数、usage 和 finish reason 必须先在 provider 层正确合并。Formatter 负责协议语义，`ChatModelBase` 负责横切生命周期；把重试塞进 Formatter 会导致 tracing 和订阅语义错位。结构化输出失败还要区分 capability 拒绝、schema 不被服务接受、以及模型返回不符合 schema 三类情况。
+
+扩展新 provider 时至少需要验证：SPI 能发现、builder 参数校验、system/tool result 角色转换、并行 tool calls、取消订阅、空流、rate limit/timeout 和 usage 聚合。OpenAI-compatible Formatter 复用只适用于 wire 接近的服务，不能覆盖原生 Gemini/Anthropic content block。
+
 ## 取舍
 
 - 优点是 core 与 SDK 解耦，新增 provider 可通过扩展模块和 SPI 接入。
