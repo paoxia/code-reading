@@ -10,7 +10,7 @@ HOST ?= 127.0.0.1
 PORT ?= 5173
 PREVIEW_PORT ?= 4173
 
-.PHONY: help install dev serve build preview site-check clone clone-one status
+.PHONY: help install dev serve build preview site-check clone clone-one pull status
 
 help:
 	@echo "Code Reading"
@@ -24,9 +24,10 @@ help:
 	@echo "  make site-check                      Build and verify expected pages"
 	@echo ""
 	@echo "Source projects:"
-	@echo "  make clone                           Clone every missing project (shallow by default)"
+	@echo "  make clone                           Clone every missing project over SSH (shallow by default)"
 	@echo "  make clone DEPTH=0                   Clone every project with full history"
 	@echo "  make clone-one PROJECT=pi            Clone one project by name"
+	@echo "  make pull                            Unshallow and fast-forward every Git project under code/"
 	@echo "  make status                          Show every configured project's local state"
 
 install:
@@ -59,7 +60,7 @@ site-check: build
 
 clone:
 	@set -eu; \
-	$(JQ) -r '.projects[] | [.name, .repo, .path] | @tsv' "$(PROJECTS_FILE)" | \
+	$(JQ) -r '.projects[] | [.name, (.repo | sub("^https://github[.]com/"; "git@github.com:")), .path] | @tsv' "$(PROJECTS_FILE)" | \
 	while IFS="$$(printf '\t')" read -r name repo path; do \
 		if [ -d "$$path/.git" ]; then \
 			echo "[skip]  $$name ($$path)"; \
@@ -81,7 +82,7 @@ clone:
 clone-one:
 	@if [ -z "$(PROJECT)" ]; then echo "PROJECT is required, for example: make clone-one PROJECT=pi" >&2; exit 2; fi
 	@set -eu; \
-	project="$$( $(JQ) -er --arg name "$(PROJECT)" '.projects[] | select(.name == $$name) | [.repo, .path] | @tsv' "$(PROJECTS_FILE)" )" || { echo "Unknown project: $(PROJECT)" >&2; exit 2; }; \
+	project="$$( $(JQ) -er --arg name "$(PROJECT)" '.projects[] | select(.name == $$name) | [(.repo | sub("^https://github[.]com/"; "git@github.com:")), .path] | @tsv' "$(PROJECTS_FILE)" )" || { echo "Unknown project: $(PROJECT)" >&2; exit 2; }; \
 	IFS="$$(printf '\t')"; set -- $$project; repo="$$1"; path="$$2"; \
 	if [ -d "$$path/.git" ]; then \
 		echo "[skip] $(PROJECT) ($$path)"; \
@@ -95,6 +96,33 @@ clone-one:
 			git clone --depth "$(DEPTH)" -- "$$repo" "$$path"; \
 		fi; \
 	fi
+
+pull:
+	@set -u; \
+	found=0; failed=0; \
+	for path in code/*; do \
+		[ -d "$$path" ] || continue; \
+		if [ -d "$$path/.git" ] || [ -f "$$path/.git" ]; then \
+			found=1; \
+			echo "[pull]  $$path"; \
+			if [ "$$(git -C "$$path" rev-parse --is-shallow-repository)" = "true" ]; then \
+				echo "[unshallow] $$path"; \
+				if ! git -C "$$path" fetch --unshallow; then \
+					echo "[error] failed to unshallow $$path" >&2; \
+					failed=1; \
+					continue; \
+				fi; \
+			fi; \
+			if ! git -C "$$path" pull --ff-only; then \
+				echo "[error] failed to update $$path" >&2; \
+				failed=1; \
+			fi; \
+		fi; \
+	done; \
+	if [ "$$found" -eq 0 ]; then \
+		echo "[info] no Git projects found under code/"; \
+	fi; \
+	exit "$$failed"
 
 status:
 	@$(JQ) -r '.projects[] | [.name, .path] | @tsv' "$(PROJECTS_FILE)" | \
