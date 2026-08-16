@@ -27,7 +27,7 @@ help:
 	@echo "  make clone                           Clone every missing project over SSH (shallow by default)"
 	@echo "  make clone DEPTH=0                   Clone every project with full history"
 	@echo "  make clone-one PROJECT=pi            Clone one project by name"
-	@echo "  make pull                            Fast-forward every Git project under code/"
+	@echo "  make pull                            Unshallow and fast-forward every Git project under code/"
 	@echo "  make status                          Show every configured project's local state"
 
 install:
@@ -105,6 +105,14 @@ pull:
 		if [ -d "$$path/.git" ] || [ -f "$$path/.git" ]; then \
 			found=1; \
 			echo "[pull]  $$path"; \
+			if [ "$$(git -C "$$path" rev-parse --is-shallow-repository)" = "true" ]; then \
+				echo "[unshallow] $$path"; \
+				if ! git -C "$$path" fetch --unshallow; then \
+					echo "[error] failed to unshallow $$path" >&2; \
+					failed=1; \
+					continue; \
+				fi; \
+			fi; \
 			if ! git -C "$$path" pull --ff-only; then \
 				echo "[error] failed to update $$path" >&2; \
 				failed=1; \
