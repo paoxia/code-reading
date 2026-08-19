@@ -2,7 +2,7 @@
 
 ## 结论
 
-Codex 当前不是“支持任意厂商协议”的通用适配框架，而是将所有普通 provider 收敛到 OpenAI Responses-compatible wire API；provider 差异主要是 base URL、认证、headers、重试和传输能力。Amazon Bedrock 作为显式特例拥有独立的运行时 provider。研究版本：`28aacbb`。
+Codex 当前不是“支持任意厂商协议”的通用适配框架，而是将所有普通 provider 收敛到 OpenAI Responses-compatible wire API；provider 差异主要是 base URL、认证、headers、重试和传输能力。Amazon Bedrock 作为显式特例拥有独立的运行时 provider。原始研究版本：`28aacbb`；2026-08-19 增量复核至 `f5a3dc55`。
 
 ## Provider 配置层
 
@@ -26,6 +26,9 @@ config / built-in provider map
 ### 认证与 Header
 
 Provider 可使用 API key 环境变量、命令凭据、Codex 登录态或 AWS 凭据，但并非任意叠加，创建阶段会校验冲突。运行时 auth provider 生成动态认证 header，静态 header、环境 header 和 query params 来自 `ModelProviderInfo`。协议兼容与认证兼容因此是两个问题：某网关即使实现 Responses JSON，也可能因 token refresh 或 header 语义不同而无法工作。
+
+增量实现把认证恢复进一步下沉到 provider：Bedrock 可在 AWS 凭据过期时刷新并重建运行时认证状态，而不是把过期签名当作普通请求失败。实现见
+[`amazon_bedrock/auth_refresh.rs`](../../code/codex/codex-rs/model-provider/src/amazon_bedrock/auth_refresh.rs)。同时，自定义 provider 不再继承环境中的 ambient auth，避免把不相关凭据透传给兼容网关。
 
 ## 请求与流式差异
 

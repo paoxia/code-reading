@@ -2,9 +2,9 @@
 
 > 研究源码：`code/pi`
 >
-> 源码版本：`97f0ccdd96cc207b6ad3630c56eea4d32dbdcf53`
+> 原始研究版本：`97f0ccdd96cc207b6ad3630c56eea4d32dbdcf53`
 >
-> 对应包版本：`@earendil-works/pi-* 0.83.0`
+> 2026-08-19 增量复核版本：`ed867e90947910c907d7d4b9d1b7a8586448f648`（`@earendil-works/pi-* 0.84.2`）
 >
 > 目标：在复用 pi 的模型适配、Agent Loop、工具协议、会话和扩展体系的基础上，构建一个
 > 可以独立命名、独立发布、拥有自有安全策略和产品体验的 Coding Agent。
@@ -466,10 +466,16 @@ type PermissionDecision =
 
 ### 10.3 Durable Harness 的现状
 
-当前仓库已有
-[`durable-harness.md`](../../code/pi/packages/agent/docs/durable-harness.md) 详细设计，但它描述的是目标
-架构：operation、step、checkpoint、harness entries、resume 和多 ref。不能据此宣称当前
-`pi-coding-agent` 已支持任意崩溃点继续执行或 exactly-once 工具副作用。
+当前仓库用 [`harness.md`](../../code/pi/packages/agent/docs/harness.md) 定义 durable operation、lane、
+checkpoint、Retry、Compaction 和恢复的实现规格；Session/Storage、record、reducer、工具等底座
+已经落地。但 [`AgentHarness`](../../code/pi/packages/agent/src/harness/agent-harness.ts) 仍是 scaffold：
+`prompt()`、`resume()`、`compact()`、Hook 和 lane API 都会抛 `HarnessNotImplemented`。
+
+`pi-coding-agent` server 已有
+[`create-harness.ts`](../../code/pi/packages/coding-agent/src/server/create-harness.ts) 组装工具与 system
+prompt，但返回的仍是这个 scaffold。默认 CLI/TUI SDK 继续使用 `AgentSession`。因此自有产品
+当前不能把新 Harness 当成可运行依赖，只能复用稳定产品路径，或把 storage/reducer 作为实验性
+底座；更不能宣称任意崩溃点恢复或工具副作用 exactly-once。
 
 因此第一版恢复语义应保守定义为：
 
@@ -767,7 +773,7 @@ src/tools/pi-tool-adapter.ts
 7. [`extensions.md`](../../code/pi/packages/coding-agent/docs/extensions.md)：实现策略和领域扩展；
 8. [`session-manager.ts`](../../code/pi/packages/coding-agent/src/core/session-manager.ts)：定义恢复边界；
 9. [`system-prompt.ts`](../../code/pi/packages/coding-agent/src/core/system-prompt.ts)：设计 Prompt 分层；
-10. [`durable-harness.md`](../../code/pi/packages/agent/docs/durable-harness.md)：只作为未来架构参考。
+10. [`harness.md`](../../code/pi/packages/agent/docs/harness.md)：对照目标 durable runtime 的状态机、效果边界和恢复契约，并用 `agent-harness-scaffold.test.ts` 核对当前完成度。
 
 最终落地原则可以压缩成一句话：
 

@@ -2,7 +2,7 @@
 
 ## 结论
 
-当前 opencode 在 `@opencode-ai/llm` 内实现了分层协议栈：canonical schema → provider facade → route/auth/transport → protocol lowering/parsing。上层 Session Runner 只处理统一 `LLMRequest` 和 `LLMEvent`，厂商差异被限制在 provider 与 protocol 模块。研究版本：`d36a2d8`。
+当前 opencode 在 `@opencode-ai/llm` 内实现了分层协议栈：canonical schema → provider facade → route/auth/transport → protocol lowering/parsing。上层 Session Runner 只处理统一 `LLMRequest` 和 `LLMEvent`，厂商差异被限制在 provider 与 protocol 模块。原始研究版本：`d36a2d8`；2026-08-19 增量复核至 `da4730e4`，本次 pull 未改变该分层。
 
 ## 分层结构
 

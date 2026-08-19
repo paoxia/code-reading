@@ -2,7 +2,9 @@
 
 ## 结论
 
-pi 的 `packages/ai` 是独立的统一 LLM 层：用规范化 `Model`、`Context`、`Message`、`AssistantMessageEventStream` 表示上层语义，再按 wire API 注册具体 stream 实现。它不把 provider 与协议混为一谈：同一 provider 可以有多个 API，同一种 API 也能被多个兼容 provider 复用。研究版本：`3a40794`。
+pi 的 `packages/ai` 是独立的统一 LLM 层：用规范化 `Model`、`Context`、`Message`、`AssistantMessageEventStream` 表示上层语义，再按 wire API 注册具体 stream 实现。它不把 provider 与协议混为一谈：同一 provider 可以有多个 API，同一种 API 也能被多个兼容 provider 复用。原始研究版本：`3a40794`；2026-08-19 增量复核至 `ed867e90`。
+
+本次增量修复主要是用量与鉴权边界：Anthropic fallback 路径的 cost 改为由规范化 usage 计算，不再偷渡到 stream options；GitHub Copilot OAuth 登录增加节流，降低 policy endpoint 限流。期间曾引入的 cache-friendly compaction primitives 已在同一更新区间被 revert，不应记为当前可用 API。
 
 ## 统一模型与事件流
 

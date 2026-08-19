@@ -2,7 +2,7 @@
 
 ## 结论
 
-LangChain 用“核心行为接口 + 标准消息/内容块 + provider 独立集成包 + 动态模型工厂”吸收 API 差异。核心不要求厂商共用 wire protocol，而是要求集成把原生请求和响应映射到 `BaseChatModel`、`AIMessage`、标准 content blocks、tool calls 和 usage。研究版本：`fa7ce76`。
+LangChain 用“核心行为接口 + 标准消息/内容块 + provider 独立集成包 + 动态模型工厂”吸收 API 差异。核心不要求厂商共用 wire protocol，而是要求集成把原生请求和响应映射到 `BaseChatModel`、`AIMessage`、标准 content blocks、tool calls 和 usage。原始研究版本：`fa7ce76`；2026-08-19 增量复核至 `2019bf5e`。新修复要求 OpenAI reasoning item 保留原始边界，DeepSeek 的 `prompt_cache_hit_tokens` 映射到标准 `cache_read`，xAI 则在加入 reasoning token 后重算 total usage。
 
 ## 核心抽象与装配
 

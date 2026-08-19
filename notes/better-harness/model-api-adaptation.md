@@ -2,7 +2,7 @@
 
 ## 结论
 
-better-harness 不拥有大模型 wire API 适配层。它适配的是 Claude Code、Codex、Qoder、Cursor、Qwen 等 Agent 宿主的配置资产、session transcript 和输出形态，用统一证据模型评估工作流；宿主自身负责模型选择、鉴权和 API 调用。研究版本：`1ad9642`。
+better-harness 不拥有大模型 wire API 适配层。它适配的是 Claude Code、Codex、Qoder、Cursor、Qwen 等 Agent 宿主的配置资产、session transcript 和输出形态，用统一证据模型评估工作流；宿主自身负责模型选择、鉴权和 API 调用。原始研究版本：`1ad9642`；2026-08-19 增量复核至 `e567e25e`，新增 Studio/Inspector 代码仍没有引入模型 wire API 适配层。
 
 ## Host adapter 而非 Model provider
 

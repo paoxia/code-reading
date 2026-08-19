@@ -2,7 +2,9 @@
 
 ## 结论
 
-Multica 的主 Agent 运行时不直接统一 OpenAI、Anthropic 等模型 wire API，而是统一 Claude Code、Codex、OpenCode、Kimi 等外部 coding-agent CLI/协议。真正的模型鉴权、消息格式和工具调用由各 CLI 负责；Multica 适配的是进程启动、会话恢复、事件、模型目录和 usage。只有服务端轻量辅助任务有一层独立的 OpenAI-compatible Chat Completions 客户端。研究版本：`ecce589`。
+Multica 的主 Agent 运行时不直接统一 OpenAI、Anthropic 等模型 wire API，而是统一 Claude Code、Codex、OpenCode、Kimi 等外部 coding-agent CLI/协议。真正的模型鉴权、消息格式和工具调用由各 CLI 负责；Multica 适配的是进程启动、会话恢复、事件、模型目录和 usage。只有服务端轻量辅助任务有一层独立的 OpenAI-compatible Chat Completions 客户端。原始研究版本：`ecce589`；2026-08-19 增量复核至 `d563bfbc`。
+
+新版中 provider command 日志会在通用 launch 边界脱敏，因此新增 CLI backend 不应各自复制一套凭据隐藏逻辑。这是 Agent 宿主适配层的安全约束，不是模型 wire API 的新统一层。
 
 ## Agent 宿主适配
 

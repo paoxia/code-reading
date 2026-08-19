@@ -1,8 +1,8 @@
 # Multica 架构与托管 Agent 执行主链
 
-> 源码版本：`multica-ai/multica main@ecce589867b9`
+> 原始研究版本：`multica-ai/multica main@ecce589867b9`
 >
-> 软件版本：`0.2.0`
+> 2026-08-19 增量复核版本：`main@d563bfbc08d0`（Web `0.4.30`）
 >
 > 研究范围：本文聚焦 Issue/Chat 触发任务、本地 Daemon 领取和执行任务、统一 Agent
 > Backend、任务状态机以及 Web/Desktop 的实时状态同步。Autopilot、Squad、移动端、
@@ -44,6 +44,8 @@ Agent。它更接近一个 **Agent 管理平面和执行编排层**：
 - 怎样为不同 CLI 准备一致的上下文、Skills、MCP 和任务凭据；
 - 怎样把异构 CLI 的流式输出统一成消息、进度、结果和用量；
 - 怎样让浏览器、桌面端和聊天渠道看到一致的实时状态。
+
+增量版本进一步收紧了这个管理面：私有 Agent 的 invoke/assign/UI 选择面统一为 owner-only，不再出现服务端拒绝但客户端仍显示可用的假能力；provider 命令日志在记录前统一脱敏，覆盖 Claude、Codex、Kimi、OpenCode 等 backend；Issue 还新增“自定义属性无值”过滤和语义化 `last_activity_at`，后者需要 migration/backfill，不能仅靠前端推导。
 
 理解这个定位后，仓库里看似分散的 Board、Chat、Daemon、Skills、Squads 和 Autopilots
 就能收束到同一条主线：**它们都是产生、路由、执行或观察 Agent Task 的不同入口。**

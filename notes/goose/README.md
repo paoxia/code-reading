@@ -1,10 +1,15 @@
 # Goose：MCP-first 本地 Agent 架构
 
-> 源码版本：`aaif-goose/goose main@5f4b7cc`（2026-08-14）
+> 原始研究版本：`aaif-goose/goose main@5f4b7cc`（2026-08-14）
+>
+> 2026-08-19 增量复核版本：`main@9f941fbfc5f4`（Desktop `1.47.0`）
 
 ## 研究范围
 
 Goose 是 Rust 实现的本地可扩展 Agent。本文重点分析它如何把 Provider、MCP Extension、Recipe、Skills、会话和多入口组织到同一个运行时中。当前源码仍处于快速演进期，并同时保留传统 `Agent` 与新的状态机抽象，阅读时需要区分现行调用路径和迁移中的结构。
+
+增量版本没有切换这条主链，但补强了多入口能力：CLI `--with-extension`
+现在可显式指定 extension 名称，Desktop 在聊天输入区显示并可操作当前 Git 分支，并发 subagent 的通知也改为按调用隔离。Recipe 参数值同时增加校验，不应再把 UI 输入当成已可信的 recipe 参数。
 
 ## 整体架构
 

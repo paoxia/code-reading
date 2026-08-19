@@ -4,8 +4,9 @@
 
 - 上游仓库：<https://github.com/NousResearch/hermes-agent>
 - 本地源码：[code/hermes-agent](../../code/hermes-agent/)
-- 源码版本：`07e97d2f5dc3d2092cfe693ef07b2527a36cd2d8`
-- `pyproject.toml` 版本：`0.19.0`
+- 原始研究版本：`07e97d2f5dc3d2092cfe693ef07b2527a36cd2d8`
+- 2026-08-19 增量复核版本：`13ce0c5c675e843af70d19c9e5144249cd51c8d1`
+- 增量复核时 `pyproject.toml` 版本：`0.20.4`
 - 研究重点：多入口 Agent 内核、对话循环、工具注册、Provider 适配、Gateway、SQLite 会话、Memory、Skill 与子 Agent 委托
 
 本文结论以当前本地源码为准。Hermes 的核心文件较大并且仍在快速演进，注释中的历史问题编号、兼容逻辑和实验功能不等于稳定接口承诺。
@@ -13,6 +14,9 @@
 ## 一句话结论
 
 Hermes Agent 采用“**多入口、单内核、注册表扩展**”的架构：CLI、消息 Gateway、TUI、ACP、Cron 和 Python 调用最终复用 `AIAgent` 与同一套 conversation loop；Provider、Tool、Memory 和 Plugin 在外围通过注册表或适配器接入，SQLite 则把会话历史、全文检索、路由和异步委托状态连成一个持久化底座。
+
+增量复核没有否定这个窄腰，但多 profile 与 Desktop 已成为更强的运行边界：Gateway adapter 生成 session key 时会带上 profile，避免不同 profile 共用会话命名空间，见
+[`gateway/platforms/base.py`](../../code/hermes-agent/gateway/platforms/base.py)；Desktop 在非默认 profile 下的 Skill Hub 安装也使用对应 runtime。ImageGen plugin 则改为从 OpenRouter 列出实时 image-output model，xAI 编辑路径会尊重实际分派的模型。
 
 ## 整体架构
 

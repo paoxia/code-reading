@@ -1,6 +1,8 @@
 # Codex Turn Loop：Session、TurnContext 与采样循环
 
-> 研究版本：`code/codex@28aacbb`
+> 原始研究版本：`code/codex@28aacbb`
+>
+> 2026-08-19 增量复核版本：`code/codex@f5a3dc55404d`
 
 ## 1. 结论
 
@@ -64,6 +66,8 @@ Turn
 ## 6. Steering 与 Interrupt
 
 Steer 是把新输入排入活动 turn 可消费的安全边界，不等于修改已经发送的 HTTP/WebSocket request。当前 sampling 完成或 loop 到达检查点后，新输入才能进入后续请求。Interrupt 则取消 active task，并要求产生明确的 `TurnAborted` 终态。
+
+增量版本需再区分两种异步交互：App Server queued submission 等当前 turn 结束后启动新 turn；`send_user_message_async` 则是 Agent 在当前 turn 中向用户发送非阻塞更新，后续用户回复会作为新输入到达。两者都不会篡改已经发出的 sampling request。
 
 测试特别验证 interrupted、replaced 与 shutdown 等 abort reason，以及 interrupt 后 raw response item 的保存顺序，见 [`session/tests.rs`](../../code/codex/codex-rs/core/src/session/tests.rs)。因此客户端不应只凭连接断开推断 turn 结束。
 

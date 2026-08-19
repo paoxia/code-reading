@@ -4,8 +4,9 @@
 
 - 上游仓库：`https://github.com/Wei-Shaw/sub2api`
 - 分支：`main`
-- 源码提交：`5a8d6c4e41e38f05cea4164e6ff03443fc0f6923`
-- 提交时间：2026-07-21 17:27:06 +08:00
+- 原始研究提交：`5a8d6c4e41e38f05cea4164e6ff03443fc0f6923`
+- 2026-08-19 增量复核提交：`ae62854abcb1285e0abc4e69d7465e78518d7d4b`
+- 增量复核提交时间：2026-08-19 16:42:52 +08:00
 - 本轮范围：启动流程、依赖组装、API 网关主链、账号调度、计费记录、数据层和前端控制面
 
 本文以本地源码为准。项目 README 的技术栈表仍写 Go 1.25.7，但
@@ -23,6 +24,11 @@ Anthropic、OpenAI、Gemini 等兼容端点，系统在请求进入上游之前�
 2. 同一上游平台背后有多个账号，需要粘性会话、负载感知和故障切换。
 3. 流式响应一旦向客户端写出语义内容，就不能随意切换账号，否则会拼接出损坏的 SSE 流。
 4. 用户、API Key、订阅、分组、账号和模型价格共同决定请求是否可执行以及如何计费。
+
+增量版本还新增了 `composite` 分组路由层。这类 API Key 不固定绑定一种 provider，而是先根据客户端 model、endpoint 和管理员配置的 exact/prefix route 解析为具体平台与 upstream model，再进入原有账号选择、限额、计费和故障归因链。未知模型会 fail closed，它不是根据任务语义自动选厂商的“智能路由”。设计边界见
+[`COMPOSITE_GROUPS.md`](../../code/sub2api/docs/COMPOSITE_GROUPS.md)。
+
+Composite 已覆盖 Responses、Chat Completions、Messages、count tokens、Gemini、embedding、image 以及 Codex `backend-api/codex`、Alpha Search/Live/Models 等入口；新增 Kimi、Zhipu 和 DeepSeek 具体平台后，路由决策仍以 concrete platform 执行配额和计费，不会生成一套独立 composite 价格。
 
 ## 3. 整体架构
 
