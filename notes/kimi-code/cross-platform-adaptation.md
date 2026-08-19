@@ -1,6 +1,8 @@
 # Kimi Code 跨平台适配分析
 
-> 源码版本：`main@119a33f`
+> 原始研究版本：`main@119a33f`
+>
+> 2026-08-19 增量复核版本：`main@2ea2ef62e42b`。本次直接影响的环境探测、login shell、host process 和 `rg` 定位逻辑未改变“Windows 使用 Git Bash、上层依赖 ExecutionEnvironment”的主结论。
 >
 > 研究范围：v2 的执行环境探测、OS backend、工具定位、capability，以及与平台相关的存储语义。
 

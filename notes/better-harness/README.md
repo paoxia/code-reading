@@ -4,12 +4,22 @@
 
 > 上游仓库：[`QoderAI/better-harness`](../../code/better-harness/README.md)
 >
-> 源码版本：`main@1ad9642768881cf12b56cc6eadd71b7b28b1f8fd`
+> 原始研究版本：`main@1ad9642768881cf12b56cc6eadd71b7b28b1f8fd`
 >
-> npm 包版本：`@qoderai/better-harness 0.3.0`
+> 2026-08-19 增量复核版本：`main@e567e25e34f4aacb77d603888042ed939894dfdf`
+>
+> 增量复核时 npm 包版本：`@qoderai/better-harness 0.6.3`
 >
 > 研究范围：根 CLI、`/better-harness` Skill、Evidence Bundle、Session/Project/Agent
 > Customize 三类证据、Agent Work Loop 模型、报告渲染与验证、多宿主适配和测试。
+
+## 2026-08-19 增量复核
+
+本次 pull 没有改变“证据闭环元 Harness”的核心定位，但用户交互面已从单独报告页进一步演进为 Studio 内置工作台：
+
+- Studio 直接挂载 [`InspectorWorkbench`](../../code/better-harness/packages/harness-studio/src/app/InspectorWorkbench.tsx)，证据查询由 Studio server 统一提供；
+- Inspector 新增按日期列出 session 的视图，而不只是单次 session 的静态渲染；
+- 视觉与交互规则集中到 [`DESIGN.md`](../../code/better-harness/DESIGN.md)。这改变了呈现层，不改变 Session/Project/Agent Customize 的证据分域。
 
 ## 1. 先给结论
 
@@ -76,7 +86,7 @@ Skill，JavaScript 层无法保证“三 Agent 隔离分析”真的发生。
 | `hooks/` | Secret Guard、test mapping、blast radius、review trigger | [`hooks/hooks.json.template`](../../code/better-harness/hooks/hooks.json.template) |
 | `templates/` | 报告结构、视觉风格和 Qoder Canvas 模板 | [`templates/reporting/routing.md`](../../code/better-harness/templates/reporting/routing.md) |
 | `.qoder-plugin/` 等 | 薄宿主壳，只负责安装和发现元数据 | [`.codex-plugin/plugin.json`](../../code/better-harness/.codex-plugin/plugin.json) |
-| `test/` | 契约、采集器、隐私、渲染、宿主适配的 Node tests | [`test/better-harness-evidence-bundle.test.mjs`](../../code/better-harness/test/better-harness-evidence-bundle.test.mjs) |
+| `test/` | 契约、采集器、隐私、渲染、宿主适配的 Node tests | [`test/reporting/better-harness-evidence-bundle.test.mjs`](../../code/better-harness/test/reporting/better-harness-evidence-bundle.test.mjs) |
 
 [`docs/ARCHITECTURE.md`](../../code/better-harness/docs/ARCHITECTURE.md) 明确规定：
 
@@ -546,7 +556,7 @@ Windows
 1. 项目要求 Node `>=22.20.0 <25.0.0`，当前 Node `22.14.0` 低于最低版本，`npm ci`
    给出 `EBADENGINE` 警告；
 2. 三个失败均来自
-   [`test/harness-report-render-cli.test.mjs`](../../code/better-harness/test/harness-report-render-cli.test.mjs)
+   [`test/reporting/harness-report-render-cli.test.mjs`](../../code/better-harness/test/reporting/harness-report-render-cli.test.mjs)
    的 Qoder Canvas 校验。本机自动发现的
    `%USERPROFILE%\.qoder\canvas\sdk\index.d.ts` 不包含模板导入的 `AreaChart`、
    `CollapsibleSection` 和 `Dialog`，所以 runtime-boundaries fail。Markdown 和 HTML

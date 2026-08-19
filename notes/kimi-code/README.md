@@ -4,9 +4,9 @@
 
 > 上游仓库：`MoonshotAI/kimi-code`
 >
-> 源码版本：`main@bf8e967d5c5c5dd458acd3319031993b8c53a44c`
+> 原始研究版本：`main@bf8e967d5c5c5dd458acd3319031993b8c53a44c`
 >
-> 研究日期：2026-07-26
+> 2026-08-19 增量复核版本：`main@2ea2ef62e42b`（`@moonshot-ai/kimi-code 0.37.2`）
 >
 > 本文以终端 TUI 的现行 v1 主链为重点，同时说明 `agent-core-v2` 与
 > `kap-server` 的演进路径。浏览器 UI、ACP 协议细节和可视化调试工具只做架构定位。
@@ -44,7 +44,7 @@ Agent Runtime ── 模型抽象（kosong）
 | 层次 | 主要目录 | 职责 |
 |---|---|---|
 | 终端产品层 | [`apps/kimi-code`](../../code/kimi-code/apps/kimi-code/) | 命令解析、TUI、交互对话框、会话回放和事件渲染 |
-| 浏览器产品层 | [`apps/kimi-web`](../../code/kimi-code/apps/kimi-web/) | 通过 REST 与 WebSocket 使用本地 Server |
+| 浏览器入口 | [`apps/kimi-code/src/cli/sub/web`](../../code/kimi-code/apps/kimi-code/src/cli/sub/web) | 启动 REST/WebSocket server 并服务预构建 Web UI；UI 源码位于独立 code-app 仓库 |
 | 公共 SDK | [`packages/node-sdk`](../../code/kimi-code/packages/node-sdk/) | 用 `KimiHarness`、`Session` 隔离 UI 与核心实现 |
 | v1 Agent 引擎 | [`packages/agent-core`](../../code/kimi-code/packages/agent-core/) | Session、Agent、Loop、工具、权限、上下文、持久化和扩展 |
 | v2 Agent 引擎 | [`packages/agent-core-v2`](../../code/kimi-code/packages/agent-core-v2/) | 基于 App / Session / Agent Scope 的新引擎 |
@@ -56,6 +56,11 @@ Agent Runtime ── 模型抽象（kosong）
 根目录 [`package.json`](../../code/kimi-code/package.json) 要求 Node.js
 `>=24.15.0` 和 pnpm `10.33.0`。这是一个多应用、多 Package 的 TypeScript
 monorepo，而不是只发布一个 CLI 文件。
+
+### 增量变化
+
+v2 的 background task 现在有了模型可见的 `WaitFor` 工具，可按 task 等待后台完成，而不需要前台 loop 自行忙轮询，实现见
+[`taskWaitTool.ts`](../../code/kimi-code/packages/agent-core-v2/src/agent/tools/task/task-wait/taskWaitTool.ts)。`subagent.spawned` 事件改为在 task 注册后发送，确保事件中的 task id 已可查；MCP 服务需要鉴权时，authenticate tool 也不再受 settle 时序竞态影响。
 
 ## 3. 终端 TUI 启动链
 

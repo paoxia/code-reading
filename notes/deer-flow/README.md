@@ -1,6 +1,8 @@
 # DeerFlow 2.0 源码分析
 
-> 源码版本：`main@c542185a7f71`
+> 原始研究版本：`main@c542185a7f71`
+>
+> 2026-08-19 增量复核版本：`main@62ffcff45b95`
 >
 > 研究范围：2.0 主线的全栈拓扑、Lead Agent、Middleware、Sandbox、Skills、Memory、Sub-Agent 与运行时持久化。旧版 Deep Research 实现位于 `1.x` 分支，与 2.0 不共享代码，不在本文范围内。
 
@@ -19,6 +21,10 @@ DeerFlow 2.0 不是单纯的研究工作流，而是一个面向分钟到小时�
 - Sub-Agent 是 Lead Agent 的委托执行单元，拥有独立模型循环和服务器生成的执行 ID；
 - Gateway 同时承担 REST API、LangGraph 兼容 API、运行管理和 SSE 桥接，不再依赖独立 LangGraph Server；
 - 2.0 已明显超出“Agent Demo”：它包含鉴权、持久化、定时任务、消息渠道和扩展包等平台能力。
+
+增量版本还增加了三个具体边界：MiniMax Code 可作为原生 ACP agent 由
+[`invoke_acp_agent_tool.py`](../../code/deer-flow/backend/packages/harness/deerflow/tools/builtins/invoke_acp_agent_tool.py)
+调用；DeerMem 增加 hybrid fact eviction，不再只依赖单一时间/容量策略；Skill 投影改为复制文件而非 hardlink，避免 sandbox 内修改反向污染源 Skill。
 
 ## 2. 整体架构
 

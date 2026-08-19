@@ -2,12 +2,14 @@
 
 相关专题：[Windows、Linux 与 macOS 跨平台适配](./cross-platform-adaptation.md)
 
-> 源码版本：`anomalyco/opencode dev@d36a2d8981ba`
+> 原始研究版本：`anomalyco/opencode dev@d36a2d8981ba`
 >
-> 软件版本：`1.18.4`
+> 2026-08-19 增量复核版本：`dev@da4730e4a41d`（`1.18.18`）
 >
 > 研究重点：默认 V1 产品主链，以及 `packages/core/src/session` 中正在演进的 V2
 > durable Session Runner。两者并存，本文会明确区分，不把 V2 规划当成默认产品行为。
+
+> 增量复核说明：本次 pull 主要是 Console/Web 生成内容、Zen 模型名和促销页调整；本文直接引用的 V2 `session/runner/llm.ts` 只有局部同步，未发现足以改写 V1/V2 边界的新默认路径。
 
 ## 1. 先给结论
 

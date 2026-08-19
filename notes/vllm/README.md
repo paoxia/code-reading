@@ -4,15 +4,19 @@
 
 - 上游仓库：<https://github.com/vllm-project/vllm>
 - 本地源码：[code/vllm](../../code/vllm/)
-- 源码版本：`26d725c334429dd86b3d1a9271fbb5e16e03c9ef`
+- 原始研究版本：`26d725c334429dd86b3d1a9271fbb5e16e03c9ef`
+- 2026-08-19 增量复核版本：`eac636a7fa476983cdae34b45a984e9852aad375`
 - 分支状态：`main` 开发快照，源码回退版本标记为 `dev`
 - 研究重点：V1 请求链、多进程架构、统一调度、连续批处理、KV Cache、Prefix Caching、Model Runner、Attention Backend 和分布式执行
 
-本文只把本提交中已经存在的实现写成确定事实。V0 已被仓库文档标记为完全弃用，因此以下主线统一从 `vllm/v1` 阅读；历史设计文档和实验性 Model Runner V2 会单独标注。
+本文只把对应提交中已经存在的实现写成确定事实。V0 已被仓库文档标记为完全弃用，因此以下主线统一从 `vllm/v1` 阅读；Model Runner V2 已对 pooling model 默认启用，但这不等于所有 generation workload 都已全量切换。
 
 ## 一句话结论
 
 vLLM 的核心不是 OpenAI 兼容 HTTP 层，也不只是一个 PagedAttention kernel，而是一条围绕“每步 token 预算”设计的推理流水线：前端异步接收和渲染请求，独立 Engine Core 持续把不同阶段的请求拼成动态批次，KV Cache Manager 按物理块分配上下文存储，Worker/Model Runner 再把调度结果变成紧凑 GPU 张量并执行模型、采样和回传。
+
+增量复核中，API server 的进程启停、worker spawn 和多 server 编排被拆到
+[`entrypoints/launchers/api_server`](../../code/vllm/vllm/entrypoints/launchers/api_server)，而 OpenAI 兼容协议实现仍保留在 `entrypoints/openai`。这是 launcher 与协议层的解耦，不是 Engine Core 调度链的替换。启动参数日志同时会脱敏 `api_key`，避免非默认参数打印时泄露凭据。
 
 ## 总体架构
 

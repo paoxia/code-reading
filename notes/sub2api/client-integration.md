@@ -4,8 +4,9 @@
 
 - 上游仓库：`code/sub2api`
 - 分支：`main`
-- 源码提交：`5a8d6c4e41e38f05cea4164e6ff03443fc0f6923`
-- 提交时间：2026-07-21 17:27:06 +08:00
+- 原始研究提交：`5a8d6c4e41e38f05cea4164e6ff03443fc0f6923`
+- 2026-08-19 增量复核提交：`ae62854abcb1285e0abc4e69d7465e78518d7d4b`
+- 增量复核提交时间：2026-08-19 16:42:52 +08:00
 - 研究范围：用户 API Key、分组平台、客户端配置生成、网关路由、协议转换、账号调度、HTTP/WS 转发和常见接入故障
 
 本文以当前本地源码为准。客户端配置和模型列表变化很快，实际使用时应优先复制控制台“API 密钥 → 使用密钥”弹窗实时生成的配置；该弹窗的实现位于 [`UseKeyModal.vue`](../../code/sub2api/frontend/src/components/keys/UseKeyModal.vue)，对应配置测试位于 [`UseKeyModal.spec.ts`](../../code/sub2api/frontend/src/components/keys/__tests__/UseKeyModal.spec.ts)。
@@ -57,7 +58,7 @@ x-goog-api-key: <SUB2API_API_KEY>
 
 ## 3. 分组决定客户端能走哪条链路
 
-当前前端只定义五种 `GroupPlatform`：`anthropic`、`openai`、`gemini`、`antigravity` 和 `grok`，见 [`frontend/src/types/index.ts`](../../code/sub2api/frontend/src/types/index.ts)。“使用密钥”弹窗根据 Key 所属分组显示以下客户端：
+当前前端 `GroupPlatform` 已扩展为 `anthropic`、`openai`、`gemini`、`antigravity`、`grok`、`kimi`、`zhipu`、`deepseek` 和 `composite`，见 [`frontend/src/types/index.ts`](../../code/sub2api/frontend/src/types/index.ts)。“使用密钥”弹窗对前五种直接平台有专用 preset，其他平台使用通用 Claude/OpenCode 配置面：
 
 | Key 的分组平台 | 控制台直接提供的客户端配置 | 默认网关协议 |
 |---|---|---|
@@ -66,8 +67,10 @@ x-goog-api-key: <SUB2API_API_KEY>
 | `gemini` | Gemini CLI、OpenCode | Gemini 原生 `/v1beta` |
 | `antigravity` | Claude Code、Gemini CLI、OpenCode | `/antigravity/v1` 或 `/antigravity/v1beta` |
 | `grok` | Grok CLI、Claude Code、Codex CLI、OpenCode | Responses 兼容入口，按 Grok 账号转发 |
+| `kimi` / `zhipu` / `deepseek` | Claude Code、OpenCode | 通用 `/v1` 入口，再按具体平台调度 |
+| `composite` | Claude Code、OpenCode（还可由调用方直接使用各协议入口） | 先按 model/endpoint 解析 concrete platform，再进入对应处理链 |
 
-这张表描述的是**控制台正式暴露的推荐组合**。后端还有额外的协议桥，例如 Anthropic 分组的 `/v1/responses` 可以执行 `Responses → Anthropic → Responses` 转换，但控制台没有为 Anthropic 分组生成 Codex 配置，因此不应把它当作与 OpenAI 分组等价的首选接入方式。路由分派逻辑集中在 [`gateway.go`](../../code/sub2api/backend/internal/server/routes/gateway.go)。
+这张表描述的是**控制台正式暴露的推荐组合**。后端还有额外的协议桥，例如 Anthropic 分组的 `/v1/responses` 可以执行 `Responses → Anthropic → Responses` 转换，但控制台没有为 Anthropic 分组生成 Codex 配置，因此不应把它当作与 OpenAI 分组等价的首选接入方式。Composite 更不能只看弹窗 preset 推断能力，它的真实出口由 route registry 的 model/endpoint 决策。路由分派逻辑集中在 [`gateway.go`](../../code/sub2api/backend/internal/server/routes/gateway.go)。
 
 ## 4. 接入前的公共准备
 
@@ -436,7 +439,7 @@ export SUB2API_API_KEY="sk-your-sub2api-key"
 
 ### 7.4 OpenCode
 
-控制台可以为所有五种分组生成 `opencode.json`。路径通常是 `~/.config/opencode/opencode.json` 或项目级 `opencode.jsonc`。Base URL 规则为：
+控制台为五种直接平台提供专用 `opencode.json`，其他平台使用通用 OpenAI/Anthropic 模板。路径通常是 `~/.config/opencode/opencode.json` 或项目级 `opencode.jsonc`。Base URL 规则为：
 
 | 分组 | OpenCode provider | Base URL |
 |---|---|---|

@@ -4,8 +4,9 @@
 
 - 上游仓库：<https://github.com/openclaw/openclaw>
 - 本地源码：[code/openclaw](../../code/openclaw/)
-- 源码版本：`1bfd207a5405c38d04b052c8eb7291cadabce99e`
-- `package.json` 版本：`2026.7.2`
+- 原始研究版本：`1bfd207a5405c38d04b052c8eb7291cadabce99e`
+- 2026-08-19 增量复核版本：`3587158a0e385f696e8162a7b1752c101143d3fc`
+- 增量复核时 `package.json` 版本：`2026.8.1`
 - 研究重点：Gateway、渠道入站路由、Agent Runtime、工具系统、会话持久化、插件与子 Agent
 
 本文只描述上述版本中已经落地的实现。OpenClaw 仍在快速演进，源码中保留的兼容分支、迁移逻辑和实验接口不应视为稳定 API。
@@ -13,6 +14,8 @@
 ## 一句话结论
 
 OpenClaw 的核心不是一个聊天界面，而是一个**常驻 Gateway 控制面**：它统一接入消息渠道和客户端，把每个入站事件路由到会话，再交给可选择的 Agent Runtime 执行；内置 runtime 最终落到 `@openclaw/agent-core` 的模型—工具循环，插件、会话数据库和子 Agent 都围绕这条窄腰扩展。
+
+增量复核后这条窄腰仍成立，但权限与状态语义更严格：嵌套 session 工具会保留 caller scope，防止子调用获得比父调用更宽的能力；Skill Workshop proposal 内容变更后必须重新 review；Gateway `activeRunIds` 一旦出现就表示完整的精确集合，客户端不应再把它当成局部增量。
 
 ## 整体架构
 
@@ -55,8 +58,8 @@ flowchart TD
 | 边界 | 主要职责 | 关键源码 |
 | --- | --- | --- |
 | 启动入口 | Node 版本检查、快速处理帮助/版本、加载构建产物 | [openclaw.mjs](../../code/openclaw/openclaw.mjs)、[src/entry.ts](../../code/openclaw/src/entry.ts) |
-| Gateway | 配置与密钥快照、鉴权、插件引导、渠道管理、RPC 与事件 | [src/gateway/server.impl.ts](../../code/openclaw/src/gateway/server.impl.ts) |
-| 入站 Turn Kernel | 分类、准入、路由、组装、执行与收尾 | [src/channels/turn/kernel.ts](../../code/openclaw/src/channels/turn/kernel.ts)、[src/channels/turn/execution.ts](../../code/openclaw/src/channels/turn/execution.ts) |
+| Gateway | 配置与密钥快照、鉴权、插件引导、渠道管理、RPC 与事件 | [src/gateway/server-start.ts](../../code/openclaw/src/gateway/server-start.ts) |
+| 入站 Turn Kernel | 分类、准入、路由、组装、执行与收尾 | [src/channels/turn/run-channel-turn.ts](../../code/openclaw/src/channels/turn/run-channel-turn.ts)、[src/channels/turn/execution.ts](../../code/openclaw/src/channels/turn/execution.ts) |
 | Agent 命令层 | 解析 agent、模型、会话和运行参数，建立执行尝试 | [src/agents/agent-command.ts](../../code/openclaw/src/agents/agent-command.ts) |
 | Embedded Runner | fallback、队列、会话锁、prompt、工具与流式事件 | [src/agents/embedded-agent-runner/run-entry.ts](../../code/openclaw/src/agents/embedded-agent-runner/run-entry.ts)、[attempt.ts](../../code/openclaw/src/agents/embedded-agent-runner/run/attempt.ts) |
 | Agent Core | 模型流、工具调用、steering、follow-up 和事件生命周期 | [packages/agent-core/src/agent-loop.ts](../../code/openclaw/packages/agent-core/src/agent-loop.ts) |
@@ -73,7 +76,7 @@ flowchart TD
 
 ### 1. 渠道事件进入 Gateway
 
-[turn/kernel.ts](../../code/openclaw/src/channels/turn/kernel.ts) 把一次入站处理拆成稳定阶段：
+[`run-channel-turn.ts`](../../code/openclaw/src/channels/turn/run-channel-turn.ts) 把一次入站处理拆成稳定阶段：
 
 ```text
 ingest
@@ -177,7 +180,7 @@ Agent Runtime 的布局与选择规则见 [agent-runtime-architecture.md](../../
 - 会话元数据、路由和 transcript 以 SQLite 为主；
 - `SessionManager` 同时保留显式独立文件/旧格式兼容入口；
 - 分支、文件访问、编解码和持久化被拆到 `session-manager-*` 模块；
-- 单次 Agent 执行还会使用 [session-write-lock.ts](../../code/openclaw/src/agents/session-write-lock.ts) 协调会话写入。
+- 会话写入的并发协调已下沉到 session/plugin runtime 的存储边界，不再由原先的单一 `src/agents/session-write-lock.ts` 文件代表。
 
 默认 DM scope 可能让多个私聊进入 main session。文档明确建议多用户部署按 channel/peer 隔离，否则会产生上下文串话风险。`incognito` 只保证会话存储留在内存，并不阻止工具把内容写到其他持久化位置。
 
@@ -196,7 +199,7 @@ Agent Runtime 的布局与选择规则见 [agent-runtime-architecture.md](../../
 - 单任务、collect 和 swarm；
 - 可选线程绑定。
 
-子 Agent 继承的是经过限制的工具策略和 workspace/delivery 上下文，而不是无条件复制父 Agent 权限。[subagent-registry.ts](../../code/openclaw/src/agents/subagent-registry.ts) 负责运行注册、持久化恢复、孤儿任务处理、完成通知和重试定时器。
+子 Agent 继承的是经过限制的工具策略和 workspace/delivery 上下文，而不是无条件复制父 Agent 权限。[`subagent-registry.ts`](../../code/openclaw/src/agents/subagents/registry/subagent-registry.ts) 负责运行注册、持久化恢复、孤儿任务处理、完成通知和重试定时器。
 
 ## 插件体系
 
@@ -233,7 +236,7 @@ Agent Runtime 的布局与选择规则见 [agent-runtime-architecture.md](../../
 ## 推荐阅读顺序
 
 1. [docs/concepts/architecture.md](../../code/openclaw/docs/concepts/architecture.md)：先理解 Gateway 为什么是控制中心。
-2. [src/channels/turn/kernel.ts](../../code/openclaw/src/channels/turn/kernel.ts)：理解消息如何进入统一 turn。
+2. [src/channels/turn/run-channel-turn.ts](../../code/openclaw/src/channels/turn/run-channel-turn.ts)：理解消息如何进入统一 turn。
 3. [src/agents/agent-command.ts](../../code/openclaw/src/agents/agent-command.ts)：理解路由结果如何变成 Agent 执行。
 4. [docs/agent-runtime-architecture.md](../../code/openclaw/docs/agent-runtime-architecture.md)：理解内置 runtime 与插件 harness 的选择。
 5. [src/agents/embedded-agent-runner/run/attempt.ts](../../code/openclaw/src/agents/embedded-agent-runner/run/attempt.ts)：理解一次执行需要装配哪些资源。

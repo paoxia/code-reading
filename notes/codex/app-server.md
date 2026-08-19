@@ -1,6 +1,8 @@
 # Codex App Server：JSON-RPC 控制面与 Core Thread 桥接
 
-> 研究版本：`code/codex@28aacbb`
+> 原始研究版本：`code/codex@28aacbb`
+>
+> 2026-08-19 增量复核版本：`code/codex@f5a3dc55404d`
 
 ## 1. 定位
 
@@ -67,6 +69,11 @@ MessageProcessor 是路由总表，不应塞入具体业务。各 `request_proce
 Request response 只确认启动，不包含完整模型结果。客户端必须持续消费 `TurnStarted`、item delta/completed、approval、error 和 terminal notification。
 
 Steer、interrupt 与 inject items 是不同 API：steer 进入活跃 turn 的安全队列，interrupt 取消 task，inject items 只修改 thread history且受直接输入规则限制。
+
+新版还增加了持久化 queued submission，其语义也不同于 steer。`thread/queue/add`
+可以在 turn 运行时保存后续用户消息，thread 恢复 idle 后再启动新 turn；完成或失败会自动继续队列，interrupt 则暂停队列。队列实现见
+[`thread_queue_processor.rs`](../../code/codex/codex-rs/app-server/src/request_processors/thread_queue_processor.rs)，协议约束见
+[`app-server/README.md`](../../code/codex/codex-rs/app-server/README.md)。普通 `turn/start` 不会隐式消费这个队列。
 
 ## 7. 协议事件投影
 

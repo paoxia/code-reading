@@ -1,6 +1,8 @@
 # DeepSeek Harness 源码分析
 
-> 源码版本：`main@47f943859bef`
+> 原始研究版本：`main@47f943859bef`
+>
+> 2026-08-19 增量复核版本：`main@99f6f02fecdb`（`dsh 0.1.0-rc.7`）
 >
 > 研究范围：Developer Preview 主线的 Cordis 插件架构、配置组合、Agent Loop、Session Event Log、能力接缝、运行 Preset 与扩展机制。
 
@@ -11,6 +13,10 @@
 DeepSeek Harness（CLI 命令为 `dsh`）不是“给 DeepSeek 模型套一组固定工具”的薄客户端，而是一套以插件组合 Agent Runtime 的 TypeScript monorepo。它 vendoring 了 Cordis 元框架，并把模型、Agent Loop、Session、Prompt、工具、文件系统、Shell、Sandbox、Sub-Agent、Web UI 与持久化都实现成可挂载插件。
 
 官方介绍见 [`README.zh.md`](../../code/deepseek-harness/README.zh.md)，架构总览见 [`docs/architecture.md`](../../code/deepseek-harness/docs/architecture.md)。当前仍标为 Developer Preview，包结构和公开接口应视为快速演进中。
+
+增量复核确认插件化主架构未变，但交互和恢复边界有两项可见更新：Ask User 问题卡可收起，实现见
+[`QuestionComposer.tsx`](../../code/deepseek-harness/packages/client/ui-user-questions/src/client/QuestionComposer.tsx)；LLM replay 会把恢复状态与已组装 content 对齐，遇到不可用状态时降级，避免 max-token continuation 重放出错，见
+[`replay.ts`](../../code/deepseek-harness/packages/llm/llm-pi-ai/src/replay.ts)。
 
 核心设计可以概括为：
 

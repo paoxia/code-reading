@@ -1,6 +1,8 @@
 # Codex Tool Runtime：规格规划、路由、审批与沙箱执行
 
-> 研究版本：`code/codex@28aacbb`
+> 原始研究版本：`code/codex@28aacbb`
+>
+> 2026-08-19 增量复核版本：`code/codex@f5a3dc55404d`
 
 ## 1. 两张工具表
 
@@ -23,6 +25,11 @@ TurnContext + model capabilities + features
 ```
 
 规划阶段会处理 shell/apply_patch/unified_exec、MCP resources、collaboration、plan、image、tool search、extension 和 dynamic tools。工具是否出现受 model capability、feature flag、code mode、环境类型和 exposure policy 共同影响，并非固定全集。
+
+新增的 `send_user_message_async` 是这套规划机制的直接例子：它只向 root agent 且支持该工具的模型暴露，调用后立即返回 accepted，将用户可见更新标记为 async delivery，不把该更新回灌到当前模型输入。见
+[`send_user_message_async.rs`](../../code/codex/codex-rs/core/src/tools/handlers/send_user_message_async.rs)。
+
+另一个边界是 environment MCP policy：MCP 工具的可见性和调用不再只受静态配置控制，还必须通过当前执行环境的 policy。因此“已连接 MCP server”不等于“本 turn 中可见且可调用”。
 
 namespace/code mode 会把多个工具合入 Responses namespace，同时注册 delegate executor。模型看到的名字可能与内部裸 handler 名不同，所以路由必须保留 name mapping，不能靠字符串随意切割。
 

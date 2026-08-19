@@ -1,6 +1,8 @@
 # DeepSeek Harness 深度架构与运行时分析
 
-> 源码版本：`main@47f943859bef`
+> 原始研究版本：`main@47f943859bef`
+>
+> 2026-08-19 增量复核版本：`main@99f6f02fecdb`。本次变更未改变 Cordis Service/Provider/Consumer 主架构，主要是 replay、PTY、Web UI 和发布边界修复。
 >
 > 当前项目处于 Developer Preview。本文描述此提交上的实现与不变量，不承诺后续版本保持相同包边界和配置格式。
 

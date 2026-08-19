@@ -1,8 +1,8 @@
 # pi 源码架构与 Agent Harness 实现
 
-> 源码版本：`earendil-works/pi main@3a40794ea14c`
+> 原始研究版本：`earendil-works/pi main@3a40794ea14c`
 >
-> 包版本：`@earendil-works/pi-* 0.80.10`；仓库根版本 `0.0.3`
+> 2026-08-19 增量复核版本：`main@ed867e909479`（`@earendil-works/pi-* 0.84.2`）
 >
 > 研究重点：`packages/ai`、`packages/agent`、`packages/coding-agent` 和
 > `packages/tui`。`packages/orchestrator` 的包描述明确标注为 experimental，本文只说明
@@ -25,7 +25,7 @@ runAgentLoop()       纯执行循环：LLM → tool → LLM
 Agent                进程内有状态包装：消息、队列、事件、取消
        ▲
        │
-AgentHarness         应用编排：持久 Session、快照、资源、Hook、Compaction
+AgentHarness         目标应用编排层；当前新版本仍是公开 API scaffold
        ▲
        │
 coding-agent         产品层：CLI/TUI、配置、扩展、内置工具、认证
@@ -36,22 +36,24 @@ coding-agent         产品层：CLI/TUI、配置、扩展、内置工具、认�
 规定状态的所有权、何时可以变更状态、什么必须持久化、模型请求使用哪一份快照，以及错误
 和取消如何收口。
 
-但阅读时必须区分“已经运行在产品里的架构”和“正在建设的新架构”：
+但阅读时必须区分“默认 CLI/TUI 产品路径”和“正在重写的 durable Harness 路径”：
 
-- 新的 [`AgentHarness`](../../code/pi/packages/agent/src/harness/agent-harness.ts) 已有独立实现和
-  测试；它直接调用 `runAgentLoop()`，不再依赖 `Agent`。
-- 当前 [`pi-coding-agent`](../../code/pi/packages/coding-agent/src/core/sdk.ts) 仍创建
-  `Agent + AgentSession`，尚未迁移到新 `AgentHarness`。
-- 迁移计划、通用 Hook、自动 Compaction、Retry、完整可恢复 Harness 等仍在
-  [`agent-harness.md`](../../code/pi/packages/agent/docs/agent-harness.md) 中标为 Planned 或
-  In progress，不能视为完成能力。
+- 新的 [`AgentHarness`](../../code/pi/packages/agent/src/harness/agent-harness.ts) 已公开完整接口，
+  但当前类名和方法签名先于执行器落地：`prompt()`、队列、Hook、Compaction、lane、恢复和
+  watch API 都会显式抛出 `HarnessNotImplemented`。已落地的是 Session/Storage、记录类型、
+  reducer、工具和 Compaction helper 等基础设施。
+- 默认 [`pi-coding-agent`](../../code/pi/packages/coding-agent/src/core/sdk.ts) 仍创建
+  `Agent + AgentSession`；同时 server 已有 [`create-harness.ts`](../../code/pi/packages/coding-agent/src/server/create-harness.ts)
+  负责组装新 Harness 的工具和 system prompt，但它返回的仍是上述 scaffold，不能作为可运行
+  Agent 使用。目标契约见 [`harness.md`](../../code/pi/packages/agent/docs/harness.md)，不能把规范
+  文档中的流程当成当前实现。
 
 ## 2. Monorepo 分层
 
 根 [`package.json`](../../code/pi/package.json) 的构建顺序直接表达了依赖方向：
 
 ```text
-pi-tui → pi-ai → pi-agent-core → storage/protocol/client → pi-coding-agent → pi-server
+pi-tui → pi-ai → pi-agent-core → session-backends/protocol/client → pi-coding-agent → pi-server
 ```
 
 | 包 | 核心职责 | 关键入口 |
@@ -60,7 +62,7 @@ pi-tui → pi-ai → pi-agent-core → storage/protocol/client → pi-coding-age
 | `packages/agent` | 通用 Agent Loop、`Agent`、新 `AgentHarness` | [`src/agent-loop.ts`](../../code/pi/packages/agent/src/agent-loop.ts)、[`src/agent.ts`](../../code/pi/packages/agent/src/agent.ts) |
 | `packages/coding-agent` | Coding Agent 产品能力、工具、会话、扩展、CLI/TUI/RPC | [`src/main.ts`](../../code/pi/packages/coding-agent/src/main.ts)、[`src/core/sdk.ts`](../../code/pi/packages/coding-agent/src/core/sdk.ts) |
 | `packages/tui` | 终端组件和差量渲染 | [`src`](../../code/pi/packages/tui/src) |
-| `packages/storage` | Session 等持久化后端 | [`storage`](../../code/pi/packages/storage) |
+| `packages/session-backends` | SQLite 等 Session 持久化后端 | [`session-backends`](../../code/pi/packages/session-backends) |
 | `packages/protocol` / `client` / `server` | 服务协议、客户端与服务端入口 | [`protocol`](../../code/pi/packages/protocol)、[`client`](../../code/pi/packages/client)、[`server`](../../code/pi/packages/server) |
 
 这个拆分让 `packages/agent` 不知道文件编辑器、终端 UI 或具体 Provider；`coding-agent`
@@ -116,7 +118,7 @@ pi-tui → pi-ai → pi-agent-core → storage/protocol/client → pi-coding-age
 |---|---|---|
 | `steer` | 当前运行的下一个安全 Provider 边界 | 纠正正在进行的任务 |
 | `followUp` | Agent 原本将结束以后 | 排队一个后续任务 |
-| `nextTurn` | 下一次显式 `prompt()` 之前，仅 `AgentHarness` 提供 | 为未来一轮预置上下文 |
+| `nextRun` | 下一次显式 `prompt()` 之前；新 `AgentHarness` 已声明但尚未实现 | 为未来一轮预置上下文 |
 
 队列模式支持 `one-at-a-time` 和 `all`。前者每个安全点只取一条，让模型有机会逐条响应；
 后者一次注入全部。
@@ -193,192 +195,83 @@ normalizePromptInput()
 它仍然不是完整 Harness：消息只在内存中，资源发现、持久化树、Compaction、分支导航和
 扩展写入顺序都不由它负责。
 
-## 5. 第三层：`AgentHarness` 如何实现 Harness
+## 5. 第三层：`AgentHarness` 正在经历不兼容重写
 
-### 5.1 Harness 的四类状态必须分开
+### 5.1 当前落地的是 scaffold，不是执行器
 
-新 [`AgentHarness`](../../code/pi/packages/agent/src/harness/agent-harness.ts) 最重要的设计是
-不再用一个可变对象同时代表“当前配置”和“正在执行的请求”。它分成四类状态：
+当前 [`AgentHarness`](../../code/pi/packages/agent/src/harness/agent-harness.ts) 的公开接口已经按
+新规范展开，但实现刻意 fail closed。源码和
+[`agent-harness-scaffold.test.ts`](../../code/pi/packages/agent/test/harness/agent-harness-scaffold.test.ts)
+共同确认：
 
-| 状态 | 内容 | 读取/变更语义 |
-|---|---|---|
-| Harness config | model、thinking、tools、resources、system prompt provider、stream options | getter 总是读最新配置；setter 影响未来快照 |
-| Turn snapshot | 本轮消息、解析后的 system prompt、活动工具、模型、资源、流参数、session id | `createTurnState()` 一次创建；当前 Provider 请求不可变 |
-| Persisted Session | 已落盘的追加式会话树 | 构建模型上下文和恢复分支 |
-| Pending writes | 忙碌期间由扩展/监听器请求的会话写入 | save point 或 settlement 时按序刷入 |
+| 能力 | 当前状态 |
+|---|---|
+| `create()` 打开无 operation record 的 Session | 已实现；返回空 `suspended` |
+| model、thinking、tools、resources、stream/retry/compaction 配置 getter/setter | 已实现；数组和对象做 defensive copy |
+| `getLeafId()`、`close()` | 已实现 |
+| 恢复已有 operation record | 未实现；`create.restore` 抛 `HarnessNotImplemented` |
+| `prompt`、skill/template、steer/follow-up/nextRun、abort | 未实现 |
+| compact、navigate、resume、lane、watch、manual drive | 未实现 |
+| Hook 和 Event 注册 | 未实现；注册时直接抛错 |
 
-如果不做这层分离，一个 Hook 在流式响应期间切换模型或工具，很容易出现“请求前半段使用旧
-配置，后半段读取新配置”的撕裂状态。
+因此不能沿 `AgentHarness.prompt()` 追踪一次真实模型调用，也不能根据方法签名声称 Retry、
+Compaction 或恢复已经连入运行主链。
 
-### 5.2 显式 phase 是结构操作的互斥门
+### 5.2 已实现的底座比 facade 更靠前
 
-Harness phase 定义在
-[`types.ts`](../../code/pi/packages/agent/src/harness/types.ts)：
+这次重写并非只有接口占位。以下底层组件已有源码和确定性测试：
 
-```text
-idle | turn | compaction | branch_summary | retry
-```
+- Session 的 entry tree、lane pointer、operation/queue/tool/usage record；
+- 内存与 JSONL Storage/Repository，以及共用 conformance suite；
+- [`reducer.ts`](../../code/pi/packages/agent/src/harness/reducer.ts) 中的纯状态归约；
+- Compaction、branch summary、Skill、prompt template、system prompt helper；
+- Node `ExecutionEnv`、read/bash/edit/write/image 工具及文件写入串行化；
+- telemetry schema 和事件类型。
 
-`prompt`、`skill`、`promptFromTemplate`、`compact`、`navigateTree` 是结构操作，只能从
-`idle` 开始，并在第一次 `await` 之前同步切换 phase。这样两个并发调用不会都越过检查。
+这些组件说明了新方向，也能独立验证，但尚缺把它们串成可执行 operation interpreter 的那一层。
 
-运行中允许的操作更窄：
+### 5.3 `harness.md` 是实现规格
 
-- `steer`、`followUp`、`nextTurn`；
-- `abort`；
-- model、thinking、tools、resources、stream options 等未来轮配置更新；
-- 通过 `appendMessage()` 排队会话写入。
+[`harness.md`](../../code/pi/packages/agent/docs/harness.md) 定义了三类持久数据、operation program
+counter、effect sandwich、lane、checkpoint、恢复和 Hook 契约。文档标题也明确写着
+`implementation specification`；当前应把它用于理解目标与审查实现进度，而不是作为功能已经
+可用的证据。
 
-### 5.3 一次 `prompt()` 的完整时序
+## 6. Session：已落地的 entry、record 与 lane
 
-```text
-prompt(text)
-  │
-  ├─ assert phase=idle；phase=turn
-  ├─ startRunPromise()
-  ├─ createTurnState()
-  │    ├─ Session.buildContext()
-  │    ├─ 复制 resources/streamOptions/tools
-  │    └─ 调用 systemPrompt provider 一次
-  │
-  └─ executeTurn()
-       ├─ 合并 nextTurnQueue
-       ├─ before_agent_start Hook
-       ├─ 建立 AbortController
-       └─ runAgentLoop(...)
-            ├─ handleAgentEvent(message_end)
-            │    └─ 先 Session.appendMessage，再通知订阅者
-            ├─ handleAgentEvent(turn_end)
-            │    ├─ 通知订阅者
-            │    ├─ flushPendingSessionWrites()
-            │    └─ 发布 save_point
-            ├─ prepareNextTurn()
-            │    ├─ 再刷 pending writes
-            │    ├─ createTurnState() 生成新快照
-            │    └─ 替换下一 Provider turn 的 context/model/thinking
-            └─ agent_end
-                 ├─ 刷写
-                 ├─ phase=idle
-                 └─ settled
-```
+[`Session`](../../code/pi/packages/agent/src/harness/session/session.ts) 依赖 `SessionStorage`，仓库提供：
 
-关键不变量是：**Agent 自己产生的消息先持久化，监听器在本事件内追加的写入随后落盘**。
-否则插件日志、标签或自定义消息可能跑到触发它们的 assistant message 前面。
+- [`InMemorySessionStorage` / `InMemorySessionRepo`](../../code/pi/packages/agent/src/harness/session/memory.ts)；
+- [`JsonlSessionStorage`](../../code/pi/packages/agent/src/harness/session/jsonl/storage.ts) 与
+  [`JsonlSessionRepo`](../../code/pi/packages/agent/src/harness/session/jsonl/repo.ts)。
 
-### 5.4 Save point 是动态配置生效的边界
+当前持久模型把数据分成三类：
 
-低层循环每个 assistant turn 和工具结果结束后调用 `prepareNextTurn()`。Harness 在这里：
+- `Entry`：message、model/thinking/tool change、compaction、branch summary、custom；
+- `LaneRecord`：operation start/finish、step/tool attempt、queue、deferred write、usage；
+- lane pointer 与 name/label 等可变事实。
 
-1. 刷新 pending writes；
-2. 重新从 Session 构建 context；
-3. 再求值 system prompt provider；
-4. 快照最新模型、thinking、工具、资源和流参数；
-5. 把新快照用于下一次 Provider 请求。
+Entry 通过 `parentId` 形成追加树，lane 保存各自游标。`Session.view(lane)` 暴露限定 lane 的树
+视图，Storage 保证同一 lane 同时最多一个 open operation。JSONL codec、重开、fork 和内存/
+文件后端一致性都有对应测试；这是当前最成熟的 durable 部分。
 
-因此运行中的 `setModel()` 不会改变正在传输的请求，却可以改变同一次 Agent Run 里的下一
-Provider turn。这是实现可重入 Harness 时最值得借鉴的模式。
+## 7. Reducer、Compaction 与工具：算法已在，编排未接
 
-### 5.5 Harness 不再包着 `Agent`
+[`reducer.ts`](../../code/pi/packages/agent/src/harness/reducer.ts) 能根据 entry/record 归约 operation、
+队列、pending write 和 fault 状态；Compaction helper 能计算切点、生成摘要并构建压缩后的上下文。
+但是 `AgentHarness.compact()`、`navigateTree()` 和 `resume()` 仍直接走 `unavailable()`。
 
-当前 `AgentHarness` 直接调用 `runAgentLoop()`。如果它包一层 `Agent`，消息状态、队列、
-取消和监听 settlement 会产生两个所有者。现在 Harness 自己拥有：
-
-- run 生命周期和 AbortController；
-- 三种队列；
-- Session 持久化；
-- Provider stream wrapper；
-- Hook 归约；
-- save-point 快照。
-
-`Agent` 仍适合只需要内存态的嵌入；`AgentHarness` 面向应用级运行时。两者是并列上层，
-不是必须叠在一起。
-
-## 6. Session：追加日志加树形游标
-
-[`Session`](../../code/pi/packages/agent/src/harness/session/session.ts) 并不直接绑定文件，而是
-依赖 `SessionStorage`。仓库当前提供：
-
-- [`InMemorySessionBackend` / `InMemorySessionRepository`](../../code/pi/packages/agent/src/harness/session/memory-repo.ts)；
-- [`JsonlSessionBackend` / `JsonlSessionRepository`](../../code/pi/packages/agent/src/harness/session/jsonl-repo.ts)；
-- Repository 负责 create/open/list/delete/fork，Backend/Storage 负责具体 entry 读写。
-
-每个 entry 有 `id`、`parentId`、`timestamp`，类型包括：
-
-- message；
-- model/thinking/active-tools change；
-- compaction、branch summary；
-- custom、custom message、label、session info；
-- leaf。
-
-因此 Session 是一棵追加式树：
-
-```text
-root
- └─ user A
-     └─ assistant A
-         ├─ user B ─ assistant B      ← leaf 1
-         └─ user C ─ assistant C      ← leaf 2
-```
-
-切分支不是删除后面的消息，而是持久化 leaf 移动，再从新 leaf 追加。JSONL 重开时从最新会
-影响 leaf 的 entry 恢复游标。
-
-`buildContext()` 分两步：
-
-1. 沿 leaf 到 root 取得当前分支，并从完整分支归约 model/thinking/active tools；
-2. 应用 Compaction transform 和应用自定义 transforms，再把 entry 投影成
-   `AgentMessage[]`。
-
-默认 custom entry 不发给模型；只有 custom message 或显式 projector 才进入上下文。这将
-“审计/控制数据”和“模型可见数据”分开。
-
-## 7. Compaction 和树导航
-
-Harness 已提供手动 `compact()` 和 `navigateTree()`：
-
-- Compaction 先计算切点，生成或接受 Hook 提供的摘要，再追加 `compaction` entry；
-- 构建上下文时只选最新 Compaction、保留区间和其后消息，完整旧历史仍在 Session；
-- 树导航可以对离开的分支生成 branch summary，再持久化新 leaf；
-- 摘要的 token usage 也随 entry 持久化。
-
-相关实现位于
-[`harness/compaction`](../../code/pi/packages/agent/src/harness/compaction)，测试位于
-[`test/harness/compaction.test.ts`](../../code/pi/packages/agent/test/harness/compaction.test.ts)。
-
-当前限制是 `AgentHarness` 还没有把自动 Compaction 决策点和 Retry 接好；产品层旧
-`AgentSession` 有自己的相关实现，不能据此推断新 Harness 已完成。
+同样，`harness/tools` 已实现可复用工具和 `ExecutionEnv`，而
+[`create-harness.ts`](../../code/pi/packages/coding-agent/src/server/create-harness.ts) 已能把 coding-agent
+的 system prompt 与这些工具装进 `AgentHarness.create()`；这证明产品适配层已经开始迁移，
+不等于新 server runtime 已能执行 prompt。
 
 ## 8. Hook、事件与错误边界
 
-Harness 有两类观察点：
-
-- `subscribe()` 观察所有 Agent/Harness 事件；
-- `on(type, handler)` 为特定 Hook 返回结果，例如改 context、阻止工具、修改工具结果、
-  改 Provider payload 或提供 Compaction。
-
-典型扩展链：
-
-```text
-before_agent_start → context → before_provider_request
-→ before_provider_payload → provider
-→ tool_call → execute → tool_result
-→ save_point → settled
-```
-
-Provider request Hook 按注册顺序合并 patch；header/metadata 中显式 `undefined` 表示删除。
-Provider transport 读取已经由流对象解耦，所以 Harness 可以顺序 `await` Hook 和持久化，
-不必另造一个 fire-and-forget 事件队列。
-
-错误分层也有意区分：
-
-- 文件、Shell、资源和 Compaction helper 使用 `Result<T, E>` 表达预期失败；
-- Session 和 Harness 的高层 mutation 直接 reject/throw typed error；
-- 公共错误尽量归一到 `AgentHarnessError`，原错误放在 `cause`；
-- 事件已经提交后，订阅者失败不会回滚提交，只会让调用者收到 `hook` 错误。
-
-不过通用 Hook 机制和安全的 session facade 仍未完成。源码文档还明确警告：监听器如果闭包
-拿到原始 Harness，并在活跃 run 内 `await waitForIdle()`，可能自锁；未来计划用
-`runWhenIdle()` 一类 facade 约束它。
+`HookName`、`Events` 和 telemetry schema 已定义目标观察面，但 `hooks`/`events` 当前由
+`UnavailableRegistry` 实现。未完成操作统一抛 `HarnessNotImplemented`，关闭后则抛
+`HarnessClosed`。这是有意的显式失败边界，避免 facade 在状态机尚未接通时表现成“调用成功但
+什么也没做”。
 
 ## 9. 当前 `pi-coding-agent` 如何组装产品
 
@@ -410,8 +303,8 @@ Provider transport 读取已经由流对象解耦，所以 Harness 可以顺序 
 ```
 
 [`AgentSession`](../../code/pi/packages/coding-agent/src/core/agent-session.ts) 超过三千行，说明
-产品层已经承担了大量 Harness 职责。新的 `packages/agent/AgentHarness` 正是在尝试把其中可
-复用、与 UI 无关的部分下沉，但迁移还没发生。
+产品层已经承担了大量 Harness 职责。新的 `packages/agent/AgentHarness` 正在尝试把其中可
+复用、与 UI 无关的部分下沉；server 组装代码已经出现，但可执行 runtime 尚未接通。
 
 CLI 的 [`main()`](../../code/pi/packages/coding-agent/src/main.ts) 创建 cwd-bound services 和
 [`AgentSessionRuntime`](../../code/pi/packages/coding-agent/src/core/agent-session-runtime.ts)，
@@ -452,61 +345,31 @@ npm --prefix packages/agent run test:harness
 
 | 想观察的机制 | 测试文件/用例 |
 |---|---|
-| steer/follow-up 队列、安全点 | [`agent-harness.test.ts`](../../code/pi/packages/agent/test/harness/agent-harness.test.ts) |
-| Provider options 与 Hook 链 | [`agent-harness-stream.test.ts`](../../code/pi/packages/agent/test/harness/agent-harness-stream.test.ts) |
-| Session 树和持久 leaf | [`session.test.ts`](../../code/pi/packages/agent/test/harness/session.test.ts) |
-| JSONL 恢复与后端一致性 | [`session-backends.test.ts`](../../code/pi/packages/agent/test/harness/session-backends.test.ts) |
+| Scaffold 的可用/未实现边界 | [`agent-harness-scaffold.test.ts`](../../code/pi/packages/agent/test/harness/agent-harness-scaffold.test.ts) |
+| operation、队列、Retry 状态归约 | [`reducer.test.ts`](../../code/pi/packages/agent/test/harness/reducer.test.ts) |
+| Session 树和内存后端 | [`session/memory.test.ts`](../../code/pi/packages/agent/test/harness/session/memory.test.ts) |
+| JSONL 恢复与存储契约 | [`session/jsonl-storage.test.ts`](../../code/pi/packages/agent/test/harness/session/jsonl-storage.test.ts) |
 | 工具顺序/并发/终止 | [`agent-loop.test.ts`](../../code/pi/packages/agent/test/agent-loop.test.ts) |
 
-最有价值的调试点依次是：
+最有价值的调试点依次是 `AgentHarness.create()` 的 restore guard、`Session`/`SessionState`、
+JSONL codec、`reduceLaneState()` 与 Compaction helper。当前没有 `createTurnState()`、
+`executeTurn()` 或 `handleAgentEvent()` 可供追踪。
 
-1. `AgentHarness.prompt()`；
-2. `createTurnState()`；
-3. `executeTurn()`；
-4. `runLoop()`；
-5. `handleAgentEvent()`；
-6. `prepareNextTurn()` 回调。
+### 11.2 从可维护的 Scaffold 用例开始
 
-### 11.2 跑官方的最小 Harness 脚本
+旧的 `test/scratch/simple.ts` 已删除，不再是官方入口。现在应从
+[`agent-harness-scaffold.test.ts`](../../code/pi/packages/agent/test/harness/agent-harness-scaffold.test.ts)
+和 [`create-harness.ts`](../../code/pi/packages/coding-agent/src/server/create-harness.ts) 学习当前边界：
+前者验证 scaffold 会明确拒绝未完成操作，后者只展示 coding-agent 工具和 system prompt 怎样
+准备接入；不要把二者当成端到端运行示例。
 
-仓库已有
-[`test/scratch/simple.ts`](../../code/pi/packages/agent/test/scratch/simple.ts)，展示了
-`NodeExecutionEnv + Session + Models + AgentHarness + skills` 的完整组装。配置好脚本使用的
-Provider 凭据后可从 `code/pi` 运行：
+### 11.3 当前能亲手验证什么
 
-```powershell
-npx tsx packages/agent/test/scratch/simple.ts
-```
+现在可以独立创建 `Session(new InMemorySessionStorage(...))`，验证 entry、record、lane、branch
+query，再换成 JSONL repo 检查重开与 fork。也可以直接测试 reducer 和 Compaction helper。
 
-建议第一次实验把 `InMemorySessionStorage` 保留不变，只观察事件；第二次再换
-`JsonlSessionRepo`，避免同时调试模型与持久化。
-
-### 11.3 从零组一个最小 Harness
-
-最小组成只有五项：
-
-```ts
-const harness = new AgentHarness({
-  env: new NodeExecutionEnv({ cwd: process.cwd() }),
-  session: new Session(new InMemorySessionStorage()),
-  models,
-  model,
-  systemPrompt: "You are a helpful assistant.",
-  tools: [],
-})
-
-harness.subscribe((event) => console.log(event.type))
-const answer = await harness.prompt("List the responsibilities of a harness")
-```
-
-然后按这个顺序增加复杂度，最容易看懂每层为什么存在：
-
-1. 加一个无副作用计算工具，观察 tool call → result → 下一 Provider turn；
-2. 在 `message_start` 时调用 `steer()`，观察消息只在安全点注入；
-3. 在工具运行时 `setModel()`，确认当前请求不变、下一轮使用新模型；
-4. 在事件监听器调用 `appendMessage()`，检查它排在 assistant/tool result 后；
-5. 换 JSONL storage，结束进程后重新打开并检查 branch/leaf；
-6. 手动 `compact()`，比较完整 entry log 与 `buildContext()` 的差异。
+不能用新 `AgentHarness` 做真实 `prompt()` 实验；调用会得到 `HarnessNotImplemented("prompt")`。
+需要观察完整 LLM → tool → LLM 主链时，应使用低层 `Agent` 或下一节的现有产品 SDK。
 
 ### 11.4 体验当前产品层
 
@@ -542,42 +405,40 @@ Harness 的难点不在 `while`，而在这些时序不变量。
 
 ## 13. 未完成与风险
 
-源码已明确标注的主要限制包括：
+当前真正的边界是：
 
-1. 新 `AgentHarness` 的自动 Compaction 和 Retry 决策点未接入。
-2. 通用 Hook 系统已设计但未完成；当前 handler 的结果归约仍较简单。
-3. session facade 与 pending-write 公共 API 未实现。
-4. 完整 listener/hook 重入、settled 时序和 abort barrier 仍待审计。
-5. 新 Harness 尚未替代 `pi-coding-agent` 的 `AgentSession`。
-6. 完全 durable Harness 不现实：工具函数、Provider、Hook、资源 loader 等 JavaScript 运行时
-   依赖无法直接序列化。
-7. Provider stream 不能续传；崩溃恢复只能从持久边界重新开始或标记 interrupted。
-8. 未完成工具调用不能默认重试，除非工具声明幂等/可重试。
+1. 新 `AgentHarness` 的执行器尚未实现，核心 public operation 都会显式失败。
+2. restore、Hook/Event registry、watch 和多 lane facade 仍是占位。
+3. `harness.md` 里的 effect sandwich、checkpoint 和恢复策略是实现规格；reducer/storage 已为其
+   铺路，但没有端到端主链证明这些语义已经成立。
+4. 默认 CLI/TUI 仍在 `AgentSession` 路径；server 的 `createCodingAgentHarness()` 也只完成组装。
+5. 即使目标状态机完成，外部副作用 exactly-once 和 Provider stream 中途续传仍明确是 non-goal。
 
-半持久化目标和崩溃场景见
-[`durable-harness.md`](../../code/pi/packages/agent/docs/durable-harness.md)。
+完整状态机、崩溃窗口与恢复策略见
+[`harness.md`](../../code/pi/packages/agent/docs/harness.md)。
 
 ## 14. 推荐阅读顺序
 
 1. [`packages/agent/src/types.ts`](../../code/pi/packages/agent/src/types.ts)：先认识消息、工具和事件。
 2. [`agent-loop.ts`](../../code/pi/packages/agent/src/agent-loop.ts)：掌握两层循环和工具结算。
 3. [`agent.ts`](../../code/pi/packages/agent/src/agent.ts)：看内存状态如何归约事件。
-4. [`harness/types.ts`](../../code/pi/packages/agent/src/harness/types.ts)：理解 Session entry、phase、Hook 契约。
-5. [`harness/agent-harness.ts`](../../code/pi/packages/agent/src/harness/agent-harness.ts)：沿 `prompt → executeTurn → handleAgentEvent` 阅读。
-6. [`harness/session/session.ts`](../../code/pi/packages/agent/src/harness/session/session.ts)：理解追加树与 context 投影。
-7. [`test/harness`](../../code/pi/packages/agent/test/harness)：用测试验证时序不变量。
-8. [`coding-agent/src/core/sdk.ts`](../../code/pi/packages/coding-agent/src/core/sdk.ts)：对比当前产品组装。
-9. [`coding-agent/src/core/agent-session.ts`](../../code/pi/packages/coding-agent/src/core/agent-session.ts)：按 prompt、工具、Compaction、extension、tree navigation 分段读，不建议从第一行顺读。
-10. [`coding-agent/src/main.ts`](../../code/pi/packages/coding-agent/src/main.ts) 和 modes：最后补齐 CLI/TUI/RPC。
+4. [`harness/session/types.ts`](../../code/pi/packages/agent/src/harness/session/types.ts)：理解 entry、record 与 lane 契约。
+5. [`harness/session/session.ts`](../../code/pi/packages/agent/src/harness/session/session.ts) 和后端：理解当前已实现的持久层。
+6. [`harness/reducer.ts`](../../code/pi/packages/agent/src/harness/reducer.ts)：看目标 operation 怎样被纯归约。
+7. [`harness/agent-harness.ts`](../../code/pi/packages/agent/src/harness/agent-harness.ts)：确认 facade 已实现与未实现的边界。
+8. [`harness.md`](../../code/pi/packages/agent/docs/harness.md)：最后对照实现规格，不倒推功能完成度。
+9. [`test/harness`](../../code/pi/packages/agent/test/harness)：用测试区分 storage/reducer 能力与 scaffold。
+10. [`coding-agent/src/core/sdk.ts`](../../code/pi/packages/coding-agent/src/core/sdk.ts)：对比当前产品组装。
+11. [`coding-agent/src/core/agent-session.ts`](../../code/pi/packages/coding-agent/src/core/agent-session.ts)：按 prompt、工具、Compaction、extension、tree navigation 分段读，不建议从第一行顺读。
+12. [`coding-agent/src/main.ts`](../../code/pi/packages/coding-agent/src/main.ts) 和 modes：最后补齐 CLI/TUI/RPC。
 
 ## 15. 核心结论
 
-pi 给出的 Harness 答案是：
+pi 当前给出的 Harness 方向是：
 
-> 把 Agent Loop 保持为消息和工具的纯编排，把应用复杂度放到明确的 Harness 边界；用
-> turn snapshot 隔离运行中配置变化，用 save point 刷新下一轮，用追加式 Session 保留
-> 可恢复历史，用显式 phase、队列语义和 awaited event settlement 保证时序。
+> 把 Agent Loop 保持为消息和工具的纯编排，用持久 entry/record/lane 保存事实，用纯 reducer
+> 描述下一步，再由尚待完成的 interpreter 负责 Provider、工具和 Hook 效果。
 
-它目前仍处在“新通用 Harness 已可测试、旧产品 Harness 尚待迁移”的阶段。正因为新旧两套
-代码同时存在，这个仓库非常适合学习 Harness 为什么会从一个简单 `Agent` 演化出 Session、
-快照、事件、资源和恢复边界。
+它目前处在“新 storage/reducer/tool 底座可测试，`AgentHarness` 执行 facade 尚未完成，旧
+`AgentSession` 继续承载产品”的阶段。当前源码最重要的阅读纪律，是把 specification、底层
+组件和可运行产品三种完成度分开。

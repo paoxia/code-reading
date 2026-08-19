@@ -1,12 +1,17 @@
 # OpenHands Agent Canvas 架构分析
 
-> 源码版本：`OpenHands/OpenHands main@e6c90d6`（2026-08-13）
+> 原始研究版本：`OpenHands/OpenHands main@e6c90d6`（2026-08-13）
+>
+> 2026-08-19 增量复核版本：`main@551e9a9ee6cc`
 
 ## 研究范围
 
 当前 `OpenHands/OpenHands` 仓库的主体是 **Agent Canvas**：负责启动、连接和观察 OpenHands Agent 的 React/TypeScript 客户端，而不是 Agent 推理循环本身。仓库自己的架构说明明确把动作执行、沙箱隔离和模型凭据托管排除在 Canvas 边界之外；核心运行时位于独立的 `software-agent-sdk` / Agent Server。
 
 因此本文重点研究完整开发 Agent 平台的前端控制面、事件流、多后端连接和部署边界。不能仅凭本仓库推断 Agent Server 内部的 Loop 或沙箱实现。
+
+增量版本进一步说明 Canvas 是“事件投影”而不是执行引擎：WebSocket 层会批量合并高频 `StreamingDeltaEvent`，再交给 store，避免快速模型输出拖垮 UI，见
+[`streaming-delta-batcher.ts`](../../code/openhands/src/utils/streaming-delta-batcher.ts)。Files 页显式显示 workspace path，Automation 界面则改为完全由 manifest 决定是否对客户端暴露，不再由散落路由自行猜测后端能力。
 
 ## 整体架构
 
