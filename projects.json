@@ -283,6 +283,24 @@
       "status": "active",
       "path": "code/aider",
       "notes": "研究代码编辑格式、Repository Map、上下文选择、Git工作流与模型适配"
+    },
+    {
+      "name": "rtk",
+      "group": "coding-agents",
+      "repo": "https://github.com/rtk-ai/rtk",
+      "description": "A CLI proxy that compresses command output for coding agents",
+      "status": "active",
+      "path": "code/rtk",
+      "notes": "研究面向Coding Agent的命令改写、输出压缩、失败回退、Hook集成和节省统计"
+    },
+    {
+      "name": "caveman",
+      "group": "coding-agents",
+      "repo": "https://github.com/JuliusBrussee/caveman",
+      "description": "Response skills and a recoverable local context-compression runtime for coding agents",
+      "status": "active",
+      "path": "code/caveman",
+      "notes": "研究Coding Agent响应压缩、上下文Engine、本地Proxy、CCR恢复、MCP工具与诚实计量"
     }
   ]
 }
