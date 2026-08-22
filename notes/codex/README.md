@@ -4,6 +4,7 @@
 
 ## 专题笔记
 
+- [Codex Open Agent Harness](./agent-harness-platform.md)：2026-08-19 平台化发布、核心架构、Codex SDK/app-server 集成层，以及与 Agents SDK、AgentKit 的边界。
 - [Turn Loop](./turn-loop.md)：Session、TurnContext、sampling step、steering、compaction 与终止语义。
 - [Tool Runtime](./tool-runtime.md)：工具规格规划、registry/router、审批、沙箱、并发与 MCP/Extension。
 - [Rollout](./rollout.md)：JSONL canonical items、恢复、rollback/fork、SQLite 投影与崩溃边界。
