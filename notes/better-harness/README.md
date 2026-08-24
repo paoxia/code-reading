@@ -8,7 +8,9 @@
 >
 > 2026-08-19 增量复核版本：`main@e567e25e34f4aacb77d603888042ed939894dfdf`
 >
-> 增量复核时 npm 包版本：`@qoderai/better-harness 0.6.3`
+> 2026-08-24 增量复核版本：`main@77db22a565f12c4396fcdfb7f79ac1bdc3dd22ba`
+>
+> 当前 npm 包版本：`@qoderai/better-harness 0.6.4`
 >
 > 研究范围：根 CLI、`/better-harness` Skill、Evidence Bundle、Session/Project/Agent
 > Customize 三类证据、Agent Work Loop 模型、报告渲染与验证、多宿主适配和测试。
@@ -20,6 +22,16 @@
 - Studio 直接挂载 [`InspectorWorkbench`](../../code/better-harness/packages/harness-studio/src/app/InspectorWorkbench.tsx)，证据查询由 Studio server 统一提供；
 - Inspector 新增按日期列出 session 的视图，而不只是单次 session 的静态渲染；
 - 视觉与交互规则集中到 [`DESIGN.md`](../../code/better-harness/DESIGN.md)。这改变了呈现层，不改变 Session/Project/Agent Customize 的证据分域。
+
+## 2026-08-24 增量复核
+
+Better Harness 的“证据审查”定位仍未变化，但 Studio 已从查看既有证据扩展为可运行和检查 Agent 的工作台：
+
+- Harness 新增 ACP SDK 执行入口，Studio 可启动 coding agent 并把 ACP 事件翻译成统一 Run 视图，见 [`acp-sdk.ts`](../../code/better-harness/packages/harness/src/exec/acp-sdk.ts) 与 [`RunView.tsx`](../../code/better-harness/packages/harness-studio/src/app/RunView.tsx)；
+- Artifact provider 成为公开扩展面，workspace browser 可按 revision 浏览代码、Markdown、PDF、表格和外部 provider 产物，见 [`provider.ts`](../../code/better-harness/packages/harness/src/artifacts/provider.ts) 与 [`workspace-artifacts.ts`](../../code/better-harness/packages/harness-studio/src/server/workspace-artifacts.ts)；
+- DeepSeek Harness 加入 configured-assets inventory，说明 Agent Customize 仍按宿主 adapter 扩展，而不是把不同宿主配置硬合并成一套 schema。
+
+因此 Studio 现在同时承担 evidence inspection、live run 和 artifact review，但评分与证据契约仍由 Harness 层控制。
 
 ## 1. 先给结论
 

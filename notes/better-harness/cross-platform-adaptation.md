@@ -1,12 +1,16 @@
 # Better Harness 跨平台适配分析
 
-> 源码版本：`main@89809f2`
+> 原始研究版本：`main@89809f2`
+>
+> 2026-08-24 增量复核版本：`main@77db22a565f1`
 >
 > 研究范围：CLI/runtime 自身，以及多 Coding Agent 宿主会话数据的路径适配。
 
 ## 1. 定位
 
 Better Harness 不是负责执行用户命令的 Coding Agent。它需要在 Windows、Linux、macOS 上读取 Codex、Claude、Cursor、Kimi、Qwen 等宿主的配置和会话，再生成分析结果。因此它面对的是“多宿主 × 多 OS”矩阵，适配重点是路径、可执行文件发现、数据目录与报告预览。
+
+本轮新增 DeepSeek Harness configured-assets adapter，并让 Studio 通过 ACP 启动宿主 Agent；这些能力继续复用 provider/path 边界。ACP 子进程结束时还会先回收 Agent process 再结算 run，避免跨平台残留子进程。结论仍是“宿主差异与 OS 差异在 adapter 处归一”，而不是所有宿主共享一个固定目录结构。
 
 ## 2. 路径 API 的动态选择
 

@@ -5,12 +5,16 @@
 > 官方公告发布日期：2026-08-19
 >
 > 源码复核版本：`openai/codex@4f39251`
+>
+> 2026-08-24 增量复核版本：`openai/codex@339751715c64`
 
 ## 1. 先说结论：这次发布的准确名称是什么
 
 OpenAI 这次的官方标题是 **“Codex as a platform: build on the open agent harness”**。其中真正被复用的是 **Codex open agent harness**，即围绕模型构建的 Agent 执行系统；它负责上下文、Agent Loop、工具、事件流、沙箱、审批和跨轮状态。官方没有发布一个名为 “Codex Agent Framework” 或 “Codex Agent SDK” 的新产品。
 
 更准确的理解是：这是一次 Codex **平台定位与集成路径的系统化发布**，不是把一个全新的通用 Agent 框架突然加入仓库。此前 CLI、IDE、app-server、Codex SDK 和底层 Rust runtime 已经是同一开源系统的不同入口；2026-08-19 的公告明确把它们作为可嵌入的 agent harness 对外解释，并给出面向垂直业务产品的组合方式。
+
+后续源码进一步证明 harness 是持续演进的运行时而非一次性发布包装：root turn 可在未完成时 suspend，TUI 可通过动态工具管理 Codex tasks，subagent fork 会保留 developer instruction 的来源标注，Agent Plugin MCP server 也会接收受控的本地环境变量。对应入口见 [`turn_suspension.rs`](../../code/codex/codex-rs/core/src/session/turn_suspension.rs)、[`dynamic_tools.rs`](../../code/codex/codex-rs/tui/src/dynamic_tools.rs) 和 [`agent_plugin_mcp_overlay.rs`](../../code/codex/codex-rs/core-plugins/src/agent_plugin_mcp_overlay.rs)。
 
 几个容易混淆的名称需要先拆开：
 

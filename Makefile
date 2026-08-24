@@ -56,7 +56,10 @@ site-check: build
 	@test -f html/index.html
 	@test -f html/deer-flow/index.html
 	@test -f html/deepseek-harness/index.html
-	@echo "[ok] VitePress site and project pages were generated"
+	@test -f html/summary/index.html
+	@test -f html/summary/coding-agents/2026-08-24-source-update.html
+	@test -f html/summary/coding-agents/cross-platform-adaptation.html
+	@echo "[ok] VitePress site, project, and summary pages were generated"
 
 clone:
 	@set -eu; \

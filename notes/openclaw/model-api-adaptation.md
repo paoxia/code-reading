@@ -2,7 +2,7 @@
 
 ## 结论
 
-OpenClaw 将 provider、model 与 wire API 分开建模，并通过统一 `Model`/`Context`/`AssistantMessageEventStream` 运行多协议模型。内建 AI runtime 处理常见 API，provider 插件再补充发现、鉴权、传输、thinking 与回放策略；协议相近但行为不同的厂商由 stream wrapper 做细粒度修正。原始研究版本：`1bfd207a`；2026-08-19 增量复核至 `3587158a`。本次变更主要收紧 Codex harness 的进程控制与 Gateway session 隔离，未把 provider 和 wire API 重新耦合。
+OpenClaw 将 provider、model 与 wire API 分开建模，并通过统一 `Model`/`Context`/`AssistantMessageEventStream` 运行多协议模型。内建 AI runtime 处理常见 API，provider 插件再补充发现、鉴权、传输、thinking 与回放策略；协议相近但行为不同的厂商由 stream wrapper 做细粒度修正。原始研究版本：`1bfd207a`；2026-08-19 增量复核至 `3587158a`，2026-08-24 再复核至 `4c48c13a`。Anthropic CLI backend 改用 Agent SDK runtime，xAI 复用 Responses tool transport；这些变化发生在 plugin/runtime 层，provider、model 与 wire API 仍分离。
 
 ## 模型解析与统一运行时
 

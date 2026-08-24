@@ -4,6 +4,8 @@
 >
 > 2026-08-19 增量复核版本：`main@d563bfbc08d0`（Web `0.4.30`）
 >
+> 2026-08-24 增量复核版本：`main@b2b4699ff600`（Web `0.4.32`）
+>
 > 研究范围：本文聚焦 Issue/Chat 触发任务、本地 Daemon 领取和执行任务、统一 Agent
 > Backend、任务状态机以及 Web/Desktop 的实时状态同步。Autopilot、Squad、移动端、
 > 云 Runtime、Slack/Lark 和 Composio 只介绍它们与主链的连接点，留待后续专题。
@@ -12,6 +14,8 @@
 
 Multica 不是 Claude Code、Codex 或 OpenCode 那样直接实现模型—工具循环的 Coding
 Agent。它更接近一个 **Agent 管理平面和执行编排层**：
+
+本轮进一步证明管理平面是主产品边界：服务端建立全局版本化 Plugin Public API v1，并让 Plugin Hook 支持持久化定时触发；ZeroClaw 作为原生 ACP runtime 加入 backend registry；Squad activity 改按 task provenance 授权。进程适配层也修复了两个跨平台输入边界：Qwen prompt 改走 stdin，Windows Pi 统一经 `powershell -Command` 保留 stdin。实现入口见 [`publicapi/v1`](../../code/multica/server/pkg/publicapi/v1)、[`jobs_plugin_hook.go`](../../code/multica/server/internal/scheduler/jobs_plugin_hook.go)、[`zeroclaw.go`](../../code/multica/server/pkg/agent/zeroclaw.go) 和 [`pi_invocation_windows.go`](../../code/multica/server/pkg/agent/pi_invocation_windows.go)。
 
 ```text
 人类或 Agent 创建/分配 Issue、发送 Chat、触发 Autopilot

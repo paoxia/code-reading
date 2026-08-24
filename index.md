@@ -10,8 +10,8 @@ hero:
       text: 开始阅读
       link: /codex/
     - theme: alt
-      text: 查看使用说明
-      link: https://github.com/paoxia/code-reading
+      text: 阅读跨项目总结
+      link: /summary/
 
 features:
   - title: Coding Agent
@@ -26,6 +26,10 @@ features:
     details: vLLM、API 网关与模型协议适配等推理和服务化实现。
     link: /vllm/
     linkText: 浏览基础设施笔记
+  - title: 跨项目总结
+    details: 围绕 Coding Agent 等主题，对多个项目的实现路线、设计取舍和共性问题进行横向归纳。
+    link: /summary/
+    linkText: 浏览跨项目总结
 ---
 
-在顶部“项目笔记”中按分类选择项目，或按 `Ctrl+K` / `⌘K` 搜索全部笔记。
+在顶部“项目笔记”中按分类选择项目，也可以进入“跨项目总结”查看横向分析；按 `Ctrl+K` / `⌘K` 可搜索全部文档。

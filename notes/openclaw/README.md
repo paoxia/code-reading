@@ -6,6 +6,7 @@
 - 本地源码：[code/openclaw](../../code/openclaw/)
 - 原始研究版本：`1bfd207a5405c38d04b052c8eb7291cadabce99e`
 - 2026-08-19 增量复核版本：`3587158a0e385f696e8162a7b1752c101143d3fc`
+- 2026-08-24 增量复核版本：`4c48c13ab6031bdb933385c6c7d9eabf40f85f77`
 - 增量复核时 `package.json` 版本：`2026.8.1`
 - 研究重点：Gateway、渠道入站路由、Agent Runtime、工具系统、会话持久化、插件与子 Agent
 
@@ -16,6 +17,8 @@
 OpenClaw 的核心不是一个聊天界面，而是一个**常驻 Gateway 控制面**：它统一接入消息渠道和客户端，把每个入站事件路由到会话，再交给可选择的 Agent Runtime 执行；内置 runtime 最终落到 `@openclaw/agent-core` 的模型—工具循环，插件、会话数据库和子 Agent 都围绕这条窄腰扩展。
 
 增量复核后这条窄腰仍成立，但权限与状态语义更严格：嵌套 session 工具会保留 caller scope，防止子调用获得比父调用更宽的能力；Skill Workshop proposal 内容变更后必须重新 review；Gateway `activeRunIds` 一旦出现就表示完整的精确集合，客户端不应再把它当成局部增量。
+
+2026-08-24 的变化继续把权限推到边界：Gateway 增加非 maintainer 的 generic operator roles，node command 在 transport handoff 重新校验 policy，node-hosted worker 可选择容器隔离；subagent 的 private commentary 不进入普通日志和完成公告。Anthropic CLI backend 则从手写 Claude session 迁到 Agent SDK runtime。实现见 [`operator-role-policy.ts`](../../code/openclaw/src/gateway/operator-role-policy.ts)、[`node-invoke-plugin-policy.ts`](../../code/openclaw/src/gateway/node-invoke-plugin-policy.ts)、[`node-worker-container-engine.ts`](../../code/openclaw/src/node-host/node-worker-container-engine.ts) 和 [`agent-sdk.runtime.ts`](../../code/openclaw/extensions/anthropic/agent-sdk.runtime.ts)。
 
 ## 整体架构
 

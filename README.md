@@ -7,8 +7,10 @@
 ```
 ├── projects.json    # 研究中的GitHub项目列表
 ├── code/            # 克隆的项目源码（已忽略）
-├── notes/           # 研究笔记
+├── notes/           # 单项目研究笔记
 │   └── {project}/   # 每个项目一个文件夹
+├── summary/         # 跨项目总结
+│   └── {topic}/     # 每个主题一个文件夹
 ├── .vitepress/      # VitePress 配置与主题
 ├── package.json     # 笔记站依赖与本地命令
 └── html/            # 生成后的静态知识站
@@ -19,10 +21,11 @@
 1. 在 `projects.json` 中添加要研究的GitHub项目
 2. 将项目克隆到 `code/` 目录
 3. 在 `notes/{project-name}/` 中记录研究笔记
+4. 在 `summary/{topic}/` 中沉淀跨项目比较和总结
 
 ## 浏览笔记站
 
-使用 VitePress 在浏览器中阅读渲染后的 Markdown，支持项目导航、全文搜索、代码高亮、文章目录和深色模式。
+使用 VitePress 在浏览器中阅读渲染后的 Markdown，支持项目笔记与跨项目总结导航、全文搜索、代码高亮、文章目录和深色模式。
 
 本地启动：
 

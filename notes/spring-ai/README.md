@@ -4,8 +4,9 @@
 
 - 上游仓库：<https://github.com/spring-projects/spring-ai>
 - 本地源码：[code/spring-ai](../../code/spring-ai/)
-- 源码版本：`aa17d5c0b07d43415c88035304c73dc7a9c5c33b`
-- Maven 版本：`2.0.1-SNAPSHOT`
+- 原始研究版本：`aa17d5c0b07d43415c88035304c73dc7a9c5c33b`
+- 2026-08-24 增量复核版本：`fd3fd6ec700340b90c3d516be57c6e6c87dd7df1`
+- Maven 版本：`2.0.2-SNAPSHOT`（复核区间包含 2.0.1 正式发布）
 - 研究重点：模型抽象、`ChatClient`、Advisor 链、工具调用、Chat Memory、RAG、MCP 和 Boot 自动配置
 
 本文研究的是 `main` 分支快照。仓库 README 指出当前 2.x 面向 Spring Boot 4.x；需要 Boot 3.5.x 的应用应核对 1.1.x 分支，不能直接照搬本文中的 2.x 工具调用实现。
@@ -13,6 +14,8 @@
 ## 一句话结论
 
 Spring AI 的核心定位是 Spring 应用中的 AI 集成框架，而不是 LangGraph 式的持久化 Agent 调度器：底层 `Model` 接口统一供应商，上层 `ChatClient` 用 Advisor 链组合记忆、RAG、工具循环和观测，Spring Boot 自动配置再把实现装配为 Bean。
+
+本轮架构不变，但运行边界更明确：`DefaultToolCallingManager` 的工具解析 fallback 变为可配置，MCP Streamable HTTP transport 增加 `maxSessions` 与 `sessionIdleTimeout`，Transformer 资源缓存会校验 resolve 后路径仍位于 cache 目录。实现见 [`DefaultToolCallingManager.java`](../../code/spring-ai/spring-ai-model/src/main/java/org/springframework/ai/model/tool/DefaultToolCallingManager.java)、[`WebFluxStreamableServerTransportProvider.java`](../../code/spring-ai/mcp/transport/mcp-spring-webflux/src/main/java/org/springframework/ai/mcp/server/webflux/transport/WebFluxStreamableServerTransportProvider.java) 和 [`ResourceCacheService.java`](../../code/spring-ai/models/spring-ai-transformers/src/main/java/org/springframework/ai/transformers/ResourceCacheService.java)。
 
 ## 模块分层
 

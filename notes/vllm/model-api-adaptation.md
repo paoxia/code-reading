@@ -2,7 +2,9 @@
 
 ## 结论
 
-vLLM 不适配外部模型 provider，而是在同一个本地推理 `EngineClient` 之上提供 OpenAI Chat/Completions/Responses 与 Anthropic Messages 等服务端兼容 API。它解决的是“多种客户端协议如何落到统一推理引擎”和“不同开源模型输出如何解析”，不是跨云厂商转发。原始研究版本：`26d725c`；2026-08-19 增量复核至 `eac636a7`。本次重构把 API server launcher 从 OpenAI 协议包中拆出，但 Chat/Responses/Anthropic handler 仍共享同一 `EngineClient`。
+vLLM 不适配外部模型 provider，而是在同一个本地推理 `EngineClient` 之上提供 OpenAI Chat/Completions/Responses 与 Anthropic Messages 等服务端兼容 API。它解决的是“多种客户端协议如何落到统一推理引擎”和“不同开源模型输出如何解析”，不是跨云厂商转发。原始研究版本：`26d725c`；2026-08-19 增量复核至 `eac636a7`，2026-08-24 再复核至 `0ecc2847`。Chat/Responses/Anthropic handler 仍共享同一 `EngineClient`。
+
+本轮协议层新增 idle SSE keep-alive comments，Anthropic `vllm_xargs` 可进入 sampling params，远程媒体会在完整下载前按大小拒绝，非流式 generate 错误返回 HTTP 500；Kimi K3 parser 还会过滤保留标记。这些变化增强兼容性与安全边界，没有形成第二套推理内核。
 
 ## 统一推理内核
 

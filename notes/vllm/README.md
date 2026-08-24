@@ -6,6 +6,7 @@
 - 本地源码：[code/vllm](../../code/vllm/)
 - 原始研究版本：`26d725c334429dd86b3d1a9271fbb5e16e03c9ef`
 - 2026-08-19 增量复核版本：`eac636a7fa476983cdae34b45a984e9852aad375`
+- 2026-08-24 增量复核版本：`0ecc284790e5403f74b899524ef82ecb69f83cb3`
 - 分支状态：`main` 开发快照，源码回退版本标记为 `dev`
 - 研究重点：V1 请求链、多进程架构、统一调度、连续批处理、KV Cache、Prefix Caching、Model Runner、Attention Backend 和分布式执行
 
@@ -17,6 +18,8 @@ vLLM 的核心不是 OpenAI 兼容 HTTP 层，也不只是一个 PagedAttention 
 
 增量复核中，API server 的进程启停、worker spawn 和多 server 编排被拆到
 [`entrypoints/launchers/api_server`](../../code/vllm/vllm/entrypoints/launchers/api_server)，而 OpenAI 兼容协议实现仍保留在 `entrypoints/openai`。这是 launcher 与协议层的解耦，不是 Engine Core 调度链的替换。启动参数日志同时会脱敏 `api_key`，避免非默认参数打印时泄露凭据。
+
+2026-08-24 的核心变更是 KV Cache Layout 标准化：attention backend、KV connector、prefix cache 和 scheduler 通过统一 layout/group geometry 交换缓存，不再依赖各后端隐含的 tensor 形状假设。与此同时，Model Runner V2 继续补 multimodal/graph memory 路径。主要实现位于 [`vllm/v1/kv_cache_interface.py`](../../code/vllm/vllm/v1/kv_cache_interface.py)、[`vllm/v1/core/kv_cache_utils.py`](../../code/vllm/vllm/v1/core/kv_cache_utils.py) 与 [`vllm/v1/attention/backends`](../../code/vllm/vllm/v1/attention/backends)。这属于内核布局重构，本文“Scheduler → KV Cache Manager → Executor/Runner”主链仍成立。
 
 ## 总体架构
 

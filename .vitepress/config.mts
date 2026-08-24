@@ -8,6 +8,7 @@ const siteDir = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 const repoDir = path.resolve(siteDir, '..')
 const notesDir = path.join(repoDir, 'notes')
+const summaryDir = path.join(repoDir, 'summary')
 const catalog = JSON.parse(
   fs.readFileSync(path.join(repoDir, 'projects.json'), 'utf8'),
 ) as {
@@ -39,18 +40,48 @@ function projectItems(project: string): DefaultTheme.SidebarItem[] {
     }))
 }
 
+function summaryItems(topic: string): DefaultTheme.SidebarItem[] {
+  const dir = path.join(summaryDir, topic)
+  if (!fs.existsSync(dir)) return []
+
+  return fs.readdirSync(dir)
+    .filter((name) => name.endsWith('.md'))
+    .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+    .map((name) => ({
+      text: titleOf(path.join(dir, name), name.replace(/\.md$/, '')),
+      link: `/summary/${topic}/${name.replace(/\.md$/, '')}`,
+    }))
+}
+
 const availableProjects = catalog.projects.filter((project) =>
   fs.existsSync(path.join(notesDir, project.name)),
 )
 
-const sidebar = Object.fromEntries(availableProjects.map((project) => [
-  `/${project.name}/`,
-  [{
-    text: project.name,
-    collapsed: false,
-    items: projectItems(project.name),
-  }],
-]))
+const summaryTopics = fs.existsSync(summaryDir)
+  ? fs.readdirSync(summaryDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+  : []
+
+const sidebar = {
+  ...Object.fromEntries(availableProjects.map((project) => [
+    `/${project.name}/`,
+    [{
+      text: project.name,
+      collapsed: false,
+      items: projectItems(project.name),
+    }],
+  ])),
+  '/summary/': [
+    { text: '跨项目总结', link: '/summary/' },
+    ...summaryTopics.map((topic) => ({
+      text: topic,
+      collapsed: false,
+      items: summaryItems(topic),
+    })),
+  ],
+}
 
 const groupMenu: DefaultTheme.NavItemWithChildren[] = catalog.groups.map((group) => ({
   text: group.label,
@@ -60,6 +91,7 @@ const groupMenu: DefaultTheme.NavItemWithChildren[] = catalog.groups.map((group)
 })).filter((group) => group.items.length > 0)
 
 const rewrites = Object.fromEntries([
+  ['summary/README.md', 'summary/index.md'],
   ...availableProjects.flatMap((project) =>
     fs.readdirSync(path.join(notesDir, project.name))
       .filter((name) => name.endsWith('.md'))
@@ -87,6 +119,15 @@ function configureMarkdown(md: any) {
     if (projectReadme && projectByName.has(projectReadme[1])) {
       const [, projectName, anchor] = projectReadme
       token.attrs[hrefIndex][1] = `/${projectName}/${anchor ? `#${anchor}` : ''}`
+      return defaultLinkOpen(tokens, index, options, env, self)
+    }
+    const summaryProjectNote = href.match(/^\.\.\/\.\.\/notes\/([^/]+)\/([^#]+?)(?:#(.*))?$/)
+    if (summaryProjectNote && projectByName.has(summaryProjectNote[1])) {
+      const [, projectName, fileName, anchor] = summaryProjectNote
+      const page = fileName === 'README.md'
+        ? ''
+        : fileName.replace(/\.md$/, '')
+      token.attrs[hrefIndex][1] = `/${projectName}/${page}${anchor ? `#${anchor}` : ''}`
       return defaultLinkOpen(tokens, index, options, env, self)
     }
     const match = href.match(/^(?:\.\/)?\.\.\/\.\.\/code\/([^/]+)\/?(.*)$/)
@@ -143,6 +184,7 @@ export default defineConfig({
     nav: [
       { text: '首页', link: '/' },
       { text: '项目笔记', items: groupMenu },
+      { text: '跨项目总结', link: '/summary/' },
       { text: 'GitHub', link: 'https://github.com/paoxia/code-reading' },
     ],
     sidebar,

@@ -6,7 +6,7 @@
 - 分支：`main`
 - 原始研究提交：`5a8d6c4e41e38f05cea4164e6ff03443fc0f6923`
 - 2026-08-19 增量复核提交：`ae62854abcb1285e0abc4e69d7465e78518d7d4b`
-- 增量复核提交时间：2026-08-19 16:42:52 +08:00
+- 2026-08-24 增量复核提交：`03e8ab41346b42de9ece4e3e5bfcb6ca2b8cb57e`（`0.1.180`）
 - 本轮范围：启动流程、依赖组装、API 网关主链、账号调度、计费记录、数据层和前端控制面
 
 本文以本地源码为准。项目 README 的技术栈表仍写 Go 1.25.7，但
@@ -29,6 +29,8 @@ Anthropic、OpenAI、Gemini 等兼容端点，系统在请求进入上游之前�
 [`COMPOSITE_GROUPS.md`](../../code/sub2api/docs/COMPOSITE_GROUPS.md)。
 
 Composite 已覆盖 Responses、Chat Completions、Messages、count tokens、Gemini、embedding、image 以及 Codex `backend-api/codex`、Alpha Search/Live/Models 等入口；新增 Kimi、Zhipu 和 DeepSeek 具体平台后，路由决策仍以 concrete platform 执行配额和计费，不会生成一套独立 composite 价格。
+
+2026-08-24 的更新继续扩展网关语义而非改变主链：OpenAI `service_tier` 在 Responses、Chat Completions 和 WebSocket 间透传并校验，计费按上游实际档位只降不升；OAuth outbound transport plugin 可接管账号出站请求；token billing 统一上下文阶梯与时间段规则；`/v1/models` 上游读取数量可配置上限。关键实现见 [`openai_gateway_request_body.go`](../../code/sub2api/backend/internal/service/openai_gateway_request_body.go)、[`openai_plugin_transport.go`](../../code/sub2api/backend/internal/service/openai_plugin_transport.go)、[`billing_token_cost_request.go`](../../code/sub2api/backend/internal/service/billing_token_cost_request.go) 和 [`models_list_response_limit.go`](../../code/sub2api/backend/internal/service/models_list_response_limit.go)。
 
 ## 3. 整体架构
 

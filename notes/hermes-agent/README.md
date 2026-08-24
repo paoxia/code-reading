@@ -6,7 +6,8 @@
 - 本地源码：[code/hermes-agent](../../code/hermes-agent/)
 - 原始研究版本：`07e97d2f5dc3d2092cfe693ef07b2527a36cd2d8`
 - 2026-08-19 增量复核版本：`13ce0c5c675e843af70d19c9e5144249cd51c8d1`
-- 增量复核时 `pyproject.toml` 版本：`0.20.4`
+- 2026-08-24 增量复核版本：`dc50f020905d5bdca5d5f683a5898f85b9c07dbd`
+- 当前 `pyproject.toml` 版本：`0.20.5`
 - 研究重点：多入口 Agent 内核、对话循环、工具注册、Provider 适配、Gateway、SQLite 会话、Memory、Skill 与子 Agent 委托
 
 本文结论以当前本地源码为准。Hermes 的核心文件较大并且仍在快速演进，注释中的历史问题编号、兼容逻辑和实验功能不等于稳定接口承诺。
@@ -17,6 +18,8 @@ Hermes Agent 采用“**多入口、单内核、注册表扩展**”的架构：
 
 增量复核没有否定这个窄腰，但多 profile 与 Desktop 已成为更强的运行边界：Gateway adapter 生成 session key 时会带上 profile，避免不同 profile 共用会话命名空间，见
 [`gateway/platforms/base.py`](../../code/hermes-agent/gateway/platforms/base.py)；Desktop 在非默认 profile 下的 Skill Hub 安装也使用对应 runtime。ImageGen plugin 则改为从 OpenRouter 列出实时 image-output model，xAI 编辑路径会尊重实际分派的模型。
+
+2026-08-24 的变化强化了委托恢复：每个 subagent prompt 会带入 workspace 项目上下文文件，`/review` 还继承父会话已加载 Skills；bot mode 对短暂错误 resume，对 context overflow 先压缩再 resume。Codex Responses adapter 会结算缺失 `output_item.done` 的 pending tool call，自定义 provider 也会先规范化 route identity 再决定 prompt caching。实现见 [`delegate_tool.py`](../../code/hermes-agent/tools/delegate_tool.py)、[`review_engine.py`](../../code/hermes-agent/agent/review_engine.py) 与 [`codex_runtime.py`](../../code/hermes-agent/agent/codex_runtime.py)。
 
 ## 整体架构
 

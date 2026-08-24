@@ -6,12 +6,16 @@
 >
 > 2026-08-19 增量复核版本：`ed867e90947910c907d7d4b9d1b7a8586448f648`（`@earendil-works/pi-* 0.84.2`）
 >
+> 2026-08-24 增量复核版本：`4af9d21d3b4d664e4a29fcabfec85171077248e3`
+>
 > 目标：在复用 pi 的模型适配、Agent Loop、工具协议、会话和扩展体系的基础上，构建一个
 > 可以独立命名、独立发布、拥有自有安全策略和产品体验的 Coding Agent。
 
 ## 1. 先给结论
 
 推荐采用“**SDK 嵌入优先、扩展实现策略、自有产品层封装、内核补丁最后考虑**”的路线：
+
+本轮复核后，这个建议仍成立，但发行方案可以少承担一项宿主前置条件：官方 bundle 已能携带 Node runtime，并通过 managed installation state 支持原地升级。自有产品若复用该分发形态，仍需自行决定签名、更新源、回滚和企业代理策略，不能把“自带 Node”误解为完整发布系统。实现与分发测试见 [`build-coding-agent-bundle.mjs`](../../code/pi/scripts/build-coding-agent-bundle.mjs) 和 [`package-distribution.test.ts`](../../code/pi/packages/coding-agent/test/package-distribution.test.ts)。
 
 ```text
 ┌────────────────────── 自有 Coding Agent ──────────────────────┐

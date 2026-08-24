@@ -1,10 +1,14 @@
 # Gemini CLI 架构与横向对照
 
-> 源码版本：`google-gemini/gemini-cli main@c0d1924`（2026-08-13）
+> 原始研究版本：`google-gemini/gemini-cli main@c0d1924`（2026-08-13）
+>
+> 2026-08-24 增量复核版本：`main@5411f113cafa`
 
 ## 研究范围
 
 本文分析 Gemini CLI 的终端入口、模型循环、工具调度、策略与沙箱，并与本仓库已有的 Codex、Kimi Code 和 OpenCode 建立对照。结论以当前 TypeScript monorepo 源码为准。
+
+本轮 5 个提交没有改变 CLI/Core/Scheduler 主链，但修复了三个边界：macOS Seatbelt profile 隔离 Docker 与其他容器 runtime 的 socket/二进制；ignore path 在 symlink 下使用一致的真实路径判断；带 tools 或 media 的空文本模型轮次会被保留。对应实现见 [`baseProfile.ts`](../../code/gemini-cli/packages/core/src/sandbox/macos/baseProfile.ts)、[`fileDiscoveryService.ts`](../../code/gemini-cli/packages/core/src/services/fileDiscoveryService.ts) 和 [`geminiChat.ts`](../../code/gemini-cli/packages/core/src/core/geminiChat.ts)。
 
 ## 分层结构
 

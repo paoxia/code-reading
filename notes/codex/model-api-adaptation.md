@@ -2,7 +2,9 @@
 
 ## 结论
 
-Codex 当前不是“支持任意厂商协议”的通用适配框架，而是将所有普通 provider 收敛到 OpenAI Responses-compatible wire API；provider 差异主要是 base URL、认证、headers、重试和传输能力。Amazon Bedrock 作为显式特例拥有独立的运行时 provider。原始研究版本：`28aacbb`；2026-08-19 增量复核至 `f5a3dc55`。
+Codex 当前不是“支持任意厂商协议”的通用适配框架，而是将所有普通 provider 收敛到 OpenAI Responses-compatible wire API；provider 差异主要是 base URL、认证、headers、重试和传输能力。Amazon Bedrock 作为显式特例拥有独立的运行时 provider。原始研究版本：`28aacbb`；2026-08-19 增量复核至 `f5a3dc55`，2026-08-24 再复核至 `33975171`。
+
+本轮 Bedrock setup 已进入 App Server，provider 能力和认证边界仍通过独立 runtime 表达；普通 provider 的 `WireApi` 仍收敛到 Responses。与此同时，Responses 内容新增来源/种类标注，并在 compaction、fork、模型切换和媒体过滤时保留；这是模型输入语义的增强，不是新增 wire protocol。
 
 ## Provider 配置层
 
