@@ -2,7 +2,7 @@
 
 ## 结论
 
-Spring AI 采用典型的 Port/Adapter 架构：`spring-ai-model` 定义统一模型、消息、响应、选项和工具抽象，各厂商模块分别使用官方 SDK 或原生 HTTP 完成双向转换，Spring Boot 自动配置负责按依赖和属性装配。研究版本：`aa17d5c`。
+Spring AI 采用典型的 Port/Adapter 架构：`spring-ai-model` 定义统一模型、消息、响应、选项和工具抽象，各厂商模块分别使用官方 SDK 或原生 HTTP 完成双向转换，Spring Boot 自动配置负责按依赖和属性装配。原始研究版本：`aa17d5c`；2026-08-24 增量复核至 `fd3fd6ec`（区间包含 2.0.1 发布）。本轮主要调整自动配置、工具解析 fallback、MCP transport 和资源安全，没有把 Provider 适配改成统一 wire protocol。
 
 ## 统一调用面
 

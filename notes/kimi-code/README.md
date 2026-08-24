@@ -8,6 +8,8 @@
 >
 > 2026-08-19 增量复核版本：`main@2ea2ef62e42b`（`@moonshot-ai/kimi-code 0.37.2`）
 >
+> 2026-08-24 增量复核版本：`main@dceb3fd634aa`（`@moonshot-ai/kimi-code 0.38.0`）
+>
 > 本文以终端 TUI 的现行 v1 主链为重点，同时说明 `agent-core-v2` 与
 > `kap-server` 的演进路径。浏览器 UI、ACP 协议细节和可视化调试工具只做架构定位。
 
@@ -38,6 +40,8 @@ Agent Runtime ── 模型抽象（kosong）
    [`agent-core-v2`](../../code/kimi-code/packages/agent-core-v2/src/)。
 
 因此阅读源码时必须区分 v1 与 v2，不能把两套实现拼成一条实际调用链。
+
+2026-08-24 复核时，V1 仍可用，但 V2 的平台化边界明显前移：agent domain 已迁入统一 `AgentRuntime`/`AgentRuntimeSet`，MCP config、registry、OAuth、workspace trust 和 plugin 汇入统一 management plane；Agent tool 增加 `fork` 上下文模式，默认子 Agent 委托深度限制为一层。关键入口见 [`agentRuntime.ts`](../../code/kimi-code/packages/agent-core-v2/src/agent/runtime/agentRuntime.ts)、[`mcpManagementService.ts`](../../code/kimi-code/packages/agent-core-v2/src/app/mcpManagement/mcpManagementService.ts) 和 [`agentTool.ts`](../../code/kimi-code/packages/agent-core-v2/src/agent/tools/agent/agentTool.ts)。因此 V2 已不是零散实验目录，但本文仍不把它误写成所有 CLI 默认路径。
 
 ## 2. 仓库分层
 

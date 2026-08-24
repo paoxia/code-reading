@@ -3,12 +3,16 @@
 > 原始研究版本：`code/codex@28aacbb`
 >
 > 2026-08-19 增量复核版本：`code/codex@f5a3dc55404d`
+>
+> 2026-08-24 增量复核版本：`code/codex@339751715c64`
 
 ## 1. 结论
 
 Rollout 是 Codex thread 的可追加事实记录，不是简单聊天 transcript。它同时保存 session metadata、模型 input/output item、turn context 和关键事件，使 thread 能恢复、fork、compact、搜索与审计。SQLite state DB/索引用于加速列表和查询，但 JSONL rollout 仍是可移植的主要记录来源。
 
 增量复核确认这个主从关系未变。新修复主要集中在迁移和恢复边界：保留 thread name、分别恢复 thread 时间戳最大值、去重 archive 触发的 rollout move，并在 compaction 后保留 MCP resource origin。这些修复强化了“JSONL 保留 canonical facts，索引可重建”的原有设计。
+
+2026-08-24 复核继续确认 JSONL/索引主从关系未变。新增 content kind/source 会随 message merge、truncate、fork 和 compaction 保留，thread tree archive 会关闭恢复出来的 descendants；恢复不再只重建文本，还要重建上下文来源与树形生命周期。
 
 核心实现位于独立 [`rollout`](../../code/codex/codex-rs/rollout) crate，Core 通过 `Session` 调用 recorder。
 

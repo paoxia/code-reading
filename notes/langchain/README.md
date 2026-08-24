@@ -6,7 +6,8 @@
 - 本地源码：[code/langchain](../../code/langchain/)
 - 原始研究版本：`fa7ce760a26437a904a4c93db75333f01d65ed83`
 - 2026-08-19 增量复核版本：`2019bf5ebe50324c548f67c2666a804343f9b772`
-- 增量复核时组件版本：`langchain 1.3.15`、`langchain-core 1.5.6`、`langchain-classic 1.0.8`
+- 2026-08-24 增量复核版本：`c4c57d35bfab39248ce6acd344915ceb1e291b24`
+- 当前组件版本：`langchain 1.3.16`、`langchain-core 1.6.1`；各 partner 包独立发布
 - 研究重点：`Runnable` 组合协议、模型/工具抽象、Agent 工厂、中间件和集成边界
 
 本文基于上述提交。各包独立发布，不能只看仓库提交就假定所有已发布版本具有完全相同的行为。
@@ -16,6 +17,8 @@
 当前 LangChain 的核心价值不是又实现了一套独立 Agent 循环，而是以 `langchain-core` 的 `Runnable`、消息、模型和工具协议作为“窄腰”，在活跃的 `langchain` 包中把模型、工具、结构化输出和中间件组装成 LangGraph `StateGraph`；真正的有状态调度、持久化和恢复由 LangGraph 承担。
 
 增量复核中这个分层未变，但契约更严格：Tool schema 序列化时如果无法解析 Pydantic forward reference 会立即失败，避免把不完整 schema 发给模型；`ModelRetryMiddleware` 会重新抛出不可重试异常，而不把它们消耗在 retry loop 中。
+
+2026-08-24 又把失败语义推进到公共协议：Core 增加标准 model exception 类型，`BaseChatModel` 会在错误路径传播 gateway metadata，`ContextEditingMiddleware` 可注入自定义 token counter，`StructuredTool` 也会解析 postponed annotations 后再识别 injected args。实现见 [`exceptions.py`](../../code/langchain/libs/core/langchain_core/exceptions.py)、[`chat_models.py`](../../code/langchain/libs/core/langchain_core/language_models/chat_models.py) 和 [`context_editing.py`](../../code/langchain/libs/langchain_v1/langchain/agents/middleware/context_editing.py)。
 
 ## 仓库分层
 

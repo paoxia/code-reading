@@ -4,6 +4,8 @@
 >
 > 2026-08-19 增量复核版本：`main@f5a3dc55404d`
 >
+> 2026-08-24 增量复核版本：`main@339751715c64`
+>
 > 研究范围：原生二进制分发、Shell/进程执行、沙箱选择和进程启动前加固。
 
 ## 1. 结论
@@ -11,6 +13,8 @@
 Codex 的跨平台设计不止是选择不同 Shell，而是把“平台原生二进制 + 平台沙箱后端 + 条件编译的进程安全能力”组合起来。macOS、Linux、Windows 对外提供相近的执行权限模型，但底层强制机制不同，部分能力也明确不等价。
 
 增量复核中，Linux sandbox 增加了对旧版 Bubblewrap FD mount 的兼容；Windows 则继续补强沙箱诊断、ACL 更新失败传递和 reparse point 防护。这些是平台后端的健壮性修复，不改变本文的“统一策略、多种强制机制”结论。
+
+2026-08-24 的变化继续沿这条路线：Linux Bubblewrap 加固 synthetic mount registry 隔离，统一执行器开始严格遵守 granular sandbox approval；macOS Seatbelt 和 Windows restricted-token 的职责边界没有被合并。平台后端仍各自强制执行，上层只共享 permission/sandbox policy。
 
 ## 2. 原生发行包选择
 

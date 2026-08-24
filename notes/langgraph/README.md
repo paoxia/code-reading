@@ -4,13 +4,16 @@
 
 - 上游仓库：<https://github.com/langchain-ai/langgraph>
 - 本地源码：[code/langgraph](../../code/langgraph/)
-- 源码版本：`30c4d58db86455128e42ddec96b1ba53c553ba22`
-- 组件版本：`langgraph 1.2.9`、`langgraph-checkpoint 4.1.1`、`langgraph-prebuilt 1.1.0`
+- 原始研究版本：`30c4d58db86455128e42ddec96b1ba53c553ba22`
+- 2026-08-24 增量复核版本：`f09cfe8ffc1eeffd68f4b628ed69c30f7cad229f`
+- 当前组件版本：`langgraph 1.2.11`、`langgraph-checkpoint 4.2.0`、`langgraph-prebuilt 1.1.0`；本轮另发布 Python SDK `0.4.3`
 - 研究重点：`StateGraph`、Pregel 调度、Channel、Checkpoint、Interrupt 和预构建工具节点
 
 ## 一句话结论
 
 LangGraph 不是把节点按连线依次调用的流程图工具：`StateGraph` 只是声明式构建器，编译后真正执行的是基于 Pregel/BSP 的 channel 驱动运行时；状态 reducer、superstep 屏障和 checkpoint 共同决定并发结果、恢复边界与副作用语义。
+
+本轮 3 个提交只在 Python SDK 增加 decrypt replacement result，并更新 CLI 示例依赖，没有修改 Pregel、Channel 或 Checkpoint 主实现。新增类型位于 [`encryption/types.py`](../../code/langgraph/libs/sdk-py/langgraph_sdk/encryption/types.py)，因此图运行时结论保持不变。
 
 ## 包结构
 

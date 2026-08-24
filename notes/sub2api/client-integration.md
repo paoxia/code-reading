@@ -6,10 +6,12 @@
 - 分支：`main`
 - 原始研究提交：`5a8d6c4e41e38f05cea4164e6ff03443fc0f6923`
 - 2026-08-19 增量复核提交：`ae62854abcb1285e0abc4e69d7465e78518d7d4b`
-- 增量复核提交时间：2026-08-19 16:42:52 +08:00
+- 2026-08-24 增量复核提交：`03e8ab41346b42de9ece4e3e5bfcb6ca2b8cb57e`（`0.1.180`）
 - 研究范围：用户 API Key、分组平台、客户端配置生成、网关路由、协议转换、账号调度、HTTP/WS 转发和常见接入故障
 
 本文以当前本地源码为准。客户端配置和模型列表变化很快，实际使用时应优先复制控制台“API 密钥 → 使用密钥”弹窗实时生成的配置；该弹窗的实现位于 [`UseKeyModal.vue`](../../code/sub2api/frontend/src/components/keys/UseKeyModal.vue)，对应配置测试位于 [`UseKeyModal.spec.ts`](../../code/sub2api/frontend/src/components/keys/__tests__/UseKeyModal.spec.ts)。
+
+本轮接入侧新增三个注意点：OpenAI Fast mode 的 `service_tier` 已贯穿 Responses、Chat 和 WS，但最终计费以网关观察到的上游档位为准；Responses Lite 强制串行 tool calls；DeepSeek 账号上的 client tools 改走 native Responses 路径。客户端不能仅从请求字段推断实际计费档位或工具并发语义。
 
 ## 2. 先建立正确的连接模型
 

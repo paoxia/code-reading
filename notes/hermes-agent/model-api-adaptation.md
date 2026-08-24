@@ -2,7 +2,7 @@
 
 ## 结论
 
-Hermes Agent 采用“OpenAI Chat Completions 作为常用内部调用面 + 原生协议适配器”的混合架构。多数 OpenAI-compatible provider 复用同一 client；Anthropic Messages、Codex Responses 和 Bedrock Converse 等差异较大的协议通过 adapter 包装成 Agent loop 可消费的 OpenAI 风格对象。原始研究版本：`07e97d2`；2026-08-19 增量复核至 `13ce0c5c`，该分层未变，变化主要在 provider catalog、profile 隔离和 ImageGen plugin 选型。
+Hermes Agent 采用“OpenAI Chat Completions 作为常用内部调用面 + 原生协议适配器”的混合架构。多数 OpenAI-compatible provider 复用同一 client；Anthropic Messages、Codex Responses 和 Bedrock Converse 等差异较大的协议通过 adapter 包装成 Agent loop 可消费的 OpenAI 风格对象。原始研究版本：`07e97d2`；2026-08-19 增量复核至 `13ce0c5c`，2026-08-24 再复核至 `dc50f020`。该分层未变；新变化是自定义 provider route identity 与 prompt-caching policy 使用同一规范化身份，Codex Responses 对 pending tool call 的终止结算更严格。
 
 ## Provider 描述与扩展
 

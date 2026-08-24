@@ -6,10 +6,13 @@
 - **描述**: Build distributed, production-grade, long-running agents
 - **主要语言**: Java
 - **默认分支**: main
+- **2026-08-24 增量复核版本**: `main@c2d43f86e668`（`2.0.3-SNAPSHOT`）
 
 ## 项目概述
 
 AgentScope Java 2.0 是一个生产级框架，用于构建分布式、企业级 Agent，提供关键抽象以适应不断增长的模型能力，并内置支持长期运行、安全控制的 Agent 执行。
+
+本轮复核没有改变总体定位，但补强了 ReAct 终态语义：空的 final response 会重试而不是静默结束，模型调用失败时当前轮上下文仍会进入持久化，Middleware 改写后的 tools 会在模型调用前归一化。实现和回归测试分别位于 [`ReActAgent.java`](../../code/agentscope-java/agentscope-core/src/main/java/io/agentscope/core/ReActAgent.java)、[`ReActAgentEmptyResponseRetryTest.java`](../../code/agentscope-java/agentscope-core/src/test/java/io/agentscope/core/agent/ReActAgentEmptyResponseRetryTest.java) 与 [`ReActAgentCallFailurePersistenceTest.java`](../../code/agentscope-java/agentscope-core/src/test/java/io/agentscope/core/agent/ReActAgentCallFailurePersistenceTest.java)。
 
 ## 核心特性
 

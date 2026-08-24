@@ -3,6 +3,8 @@
 > 原始研究版本：`code/codex@28aacbb`
 >
 > 2026-08-19 增量复核版本：`code/codex@f5a3dc55404d`
+>
+> 2026-08-24 增量复核版本：`code/codex@339751715c64`
 
 ## 1. 两张工具表
 
@@ -25,6 +27,8 @@ TurnContext + model capabilities + features
 ```
 
 规划阶段会处理 shell/apply_patch/unified_exec、MCP resources、collaboration、plan、image、tool search、extension 和 dynamic tools。工具是否出现受 model capability、feature flag、code mode、环境类型和 exposure policy 共同影响，并非固定全集。
+
+本轮进一步收紧运行时：unified exec 会执行 granular sandbox approval，Guardian review 与 tool call 同生共灭，executor plugin Stop hook 复用执行上下文；TUI task 管理也通过 dynamic tool 接入，而不是绕过 tool plan 直接改状态。实现见 [`exec_command.rs`](../../code/codex/codex-rs/core/src/tools/handlers/unified_exec/exec_command.rs)、[`dynamic_tools.rs`](../../code/codex/codex-rs/tui/src/dynamic_tools.rs) 与对应审批测试。
 
 新增的 `send_user_message_async` 是这套规划机制的直接例子：它只向 root agent 且支持该工具的模型暴露，调用后立即返回 accepted，将用户可见更新标记为 async delivery，不把该更新回灌到当前模型输入。见
 [`send_user_message_async.rs`](../../code/codex/codex-rs/core/src/tools/handlers/send_user_message_async.rs)。

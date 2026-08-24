@@ -2,7 +2,7 @@
 
 ## 结论
 
-kimi-code 将模型适配集中在 `packages/kosong`：`ChatProvider` 规定统一生成与配置接口，provider adapter 分别实现 Kimi、OpenAI Chat、OpenAI Responses、Anthropic、Google GenAI/Vertex，Agent Core 只消费规范化的流式消息部件。原始研究版本：`bf8e967d5`；2026-08-19 增量复核至 `2ea2ef62`。Google GenAI 适配器现在会为无文本的 assistant message 发出 `null` content，避免伪造空字符串改变协议语义。
+kimi-code 将模型适配集中在 `packages/kosong`：`ChatProvider` 规定统一生成与配置接口，provider adapter 分别实现 Kimi、OpenAI Chat、OpenAI Responses、Anthropic、Google GenAI/Vertex，Agent Core 只消费规范化的流式消息部件。原始研究版本：`bf8e967d5`；2026-08-19 增量复核至 `2ea2ef62`，2026-08-24 再复核至 `dceb3fd6`。Google GenAI 的 `null` content 语义仍保留；本轮主要变化在 Agent Runtime/MCP 管理面，`packages/kosong` 的 provider/wire 分层没有被改写。
 
 ## 统一抽象
 

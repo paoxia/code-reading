@@ -7,12 +7,15 @@
 - 分支：`main`
 - 源码提交：`eb0c1ea962d4c6cee07f4920e36b1aa7a025d320`
 - 提交日期：2026-07-22
+- 2026-08-24 增量复核提交：`33a3d8a9d6e5c3d4861731933a8857cc5e03315d`
 - 研究重点：Claude 插件分层、Skill/Command 复用、Managed Agent Cookbook、GL Reconciler、信任边界和部署脚本
 
 这不是一个包含 Agent 调度器、模型客户端和业务数据库的完整应用。仓库主要用 Markdown、JSON、YAML
 和少量 Python/Shell 脚本描述金融工作流，再由 Claude 插件系统或 Managed Agents API 提供运行时。
 因此，本文分析的是“工作流如何被声明、装配和部署”，不能把 Prompt 中描述的能力视为已经由本仓库代码
 强制保证。
+
+本轮上游只修订 `claude-for-msft-365-install` 的 Microsoft Foundry 安装说明和脚本，共 1 个提交、5 个文件；Plugin、Managed Agent 和部署主链没有变化。因此保留原架构结论，仅更新复核边界。
 
 ## 2. 一句话认识项目
 
@@ -305,4 +308,3 @@ Marketplace、Plugin Manifest 和 steering example，没有覆盖 `.mcp.json`，
    [`validate.py`](../../code/financial-services/scripts/validate.py) 和
    [`orchestrate.py`](../../code/financial-services/scripts/orchestrate.py)，确认声明如何落到部署和控制通道，
    以及哪些安全保证仍需接入方补齐。
-

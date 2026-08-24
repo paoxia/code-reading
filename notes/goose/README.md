@@ -3,6 +3,8 @@
 > 原始研究版本：`aaif-goose/goose main@5f4b7cc`（2026-08-14）
 >
 > 2026-08-19 增量复核版本：`main@9f941fbfc5f4`（Desktop `1.47.0`）
+>
+> 2026-08-24 增量复核版本：`main@2eb3ab1001de`（Desktop `1.47.0`）
 
 ## 研究范围
 
@@ -10,6 +12,8 @@ Goose 是 Rust 实现的本地可扩展 Agent。本文重点分析它如何把 P
 
 增量版本没有切换这条主链，但补强了多入口能力：CLI `--with-extension`
 现在可显式指定 extension 名称，Desktop 在聊天输入区显示并可操作当前 Git 分支，并发 subagent 的通知也改为按调用隔离。Recipe 参数值同时增加校验，不应再把 UI 输入当成已可信的 recipe 参数。
+
+2026-08-24 的更新集中在可审计工具生命周期与可见性：Hook 新增 `PreToolUseResult`，同一个稳定 `tool_call_id` 会贯穿调用生命周期；Code Mode 会遵守 MCP tool 的 model visibility，Skill discovery 也必须遵守 plugin enablement。实现和测试见 [`hooks/mod.rs`](../../code/goose/crates/goose/src/hooks/mod.rs)、[`ops_toolcalling.rs`](../../code/goose/crates/goose/src/agents/state_machine/ops_toolcalling.rs) 与 [`hooks_lifecycle.rs`](../../code/goose/crates/goose/src/agents/state_machine/tests/hooks_lifecycle.rs)。Provider 侧新增多种 declarative gateway，并补充 GPT-5.6 Responses follow-up，但 `Agent → Provider/Extension/Session` 主拓扑未改变。
 
 ## 整体架构
 

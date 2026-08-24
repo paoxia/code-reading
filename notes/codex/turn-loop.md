@@ -3,10 +3,14 @@
 > 原始研究版本：`code/codex@28aacbb`
 >
 > 2026-08-19 增量复核版本：`code/codex@f5a3dc55404d`
+>
+> 2026-08-24 增量复核版本：`code/codex@339751715c64`
 
 ## 1. 结论
 
 Codex 的主循环不是一个裸 `while tool_calls`。`Session` 持有 thread 级长期状态，`TurnContext` 冻结本轮配置与环境快照，task 负责不同类型工作，`run_turn()` 才驱动普通用户轮次中的多次模型采样。模型事件、工具执行、持久化和客户端通知在同一轮中协作，但由不同模块负责。
+
+本轮新增 unfinished root turn suspension，使 active task 可以进入可恢复的 suspended 边界；同时 context fragments 带上来源标注，subagent fork 会保留 developer instruction annotations。`TurnContext` 因而不只冻结参数，还要维护进入模型的上下文种类与来源，见 [`turn_suspension.rs`](../../code/codex/codex-rs/core/src/session/turn_suspension.rs) 和 [`developer_instructions.rs`](../../code/codex/codex-rs/core/src/context/developer_instructions.rs)。
 
 ## 2. 对象与生命周期
 

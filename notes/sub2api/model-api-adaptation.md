@@ -2,9 +2,11 @@
 
 ## 结论
 
-sub2api 的核心就是多协议、多上游账号之间的网关适配。它同时暴露 Anthropic Messages、OpenAI Responses/Chat Completions 和 Gemini 原生入口，再依据 API Key 所属分组与候选账号的 platform/type 选择直通、协议转换或专用上游实现。原始研究版本：`5a8d6c4e4`；2026-08-19 增量复核至 `ae62854a`。
+sub2api 的核心就是多协议、多上游账号之间的网关适配。它同时暴露 Anthropic Messages、OpenAI Responses/Chat Completions 和 Gemini 原生入口，再依据 API Key 所属分组与候选账号的 platform/type 选择直通、协议转换或专用上游实现。原始研究版本：`5a8d6c4e4`；2026-08-19 增量复核至 `ae62854a`，2026-08-24 再复核至 `03e8ab41`。
 
 新增 `composite` 并没有改写各协议 adapter，而是在路由入口前增加 `public model + endpoint → concrete platform + upstream model` 决策。该决策支持显式 exact/prefix route 和内置模型名检测，内建检测未命中时 fail closed；解析后的 concrete platform 才进入账号选择、quota、billing 和 ops attribution。这一层已覆盖 Codex endpoints 及 Kimi/Zhipu/DeepSeek 目标平台，但不等于协议无关的智能转换。
+
+本轮把 `service_tier` 纳入 Chat/Responses/WS bridge 和 billing observation，OAuth outbound plugin 则位于协议转换之后、真实出站之前；二者说明“协议字段归一化”和“账号传输实现”是两个独立扩展点。Responses Lite 串行工具约束与 DeepSeek native Responses client tools 也都在 concrete platform 确定后生效。
 
 ## 入口协议与路由
 

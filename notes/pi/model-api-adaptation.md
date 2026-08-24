@@ -2,9 +2,11 @@
 
 ## 结论
 
-pi 的 `packages/ai` 是独立的统一 LLM 层：用规范化 `Model`、`Context`、`Message`、`AssistantMessageEventStream` 表示上层语义，再按 wire API 注册具体 stream 实现。它不把 provider 与协议混为一谈：同一 provider 可以有多个 API，同一种 API 也能被多个兼容 provider 复用。原始研究版本：`3a40794`；2026-08-19 增量复核至 `ed867e90`。
+pi 的 `packages/ai` 是独立的统一 LLM 层：用规范化 `Model`、`Context`、`Message`、`AssistantMessageEventStream` 表示上层语义，再按 wire API 注册具体 stream 实现。它不把 provider 与协议混为一谈：同一 provider 可以有多个 API，同一种 API 也能被多个兼容 provider 复用。原始研究版本：`3a40794`；2026-08-19 增量复核至 `ed867e90`，2026-08-24 再复核至 `4af9d21d`。
 
 本次增量修复主要是用量与鉴权边界：Anthropic fallback 路径的 cost 改为由规范化 usage 计算，不再偷渡到 stream options；GitHub Copilot OAuth 登录增加节流，降低 policy endpoint 限流。期间曾引入的 cache-friendly compaction primitives 已在同一更新区间被 revert，不应记为当前可用 API。
+
+新一轮修复强调 reasoning metadata 往返：OpenAI Chat Completions 的 thinking signature 保留 `reasoning_details`，Bedrock Converse 的 redacted reasoning 可 round-trip，模型配置还可显式覆盖 finish reason compatibility。统一事件因此不能只保留展示文本，还要保留后续请求所需的 provider reasoning facts。
 
 ## 统一模型与事件流
 

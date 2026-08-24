@@ -4,6 +4,8 @@
 >
 > 2026-08-19 增量复核版本：`main@2ea2ef62e42b`。本次直接影响的环境探测、login shell、host process 和 `rg` 定位逻辑未改变“Windows 使用 Git Bash、上层依赖 ExecutionEnvironment”的主结论。
 >
+> 2026-08-24 增量复核版本：`main@dceb3fd634aa`。新增 Shell path bridge 会把 Git Bash 产生的 POSIX 路径解析回宿主文件路径，供 Bash tool 与 path-access policy 使用；主结论不变，但“统一 Bash”现在明确包含命令路径与文件系统路径之间的双向桥接。
+>
 > 研究范围：v2 的执行环境探测、OS backend、工具定位、capability，以及与平台相关的存储语义。
 
 ## 1. 结论

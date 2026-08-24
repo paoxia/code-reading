@@ -1,12 +1,16 @@
 # pi 跨平台适配分析
 
-> 源码版本：`main@97f0ccdd9`
+> 原始研究版本：`main@97f0ccdd9`
+>
+> 2026-08-24 增量复核版本：`main@4af9d21d3b4d`
 >
 > 研究范围：Coding Agent 的 Shell、子进程、路径、终端、剪贴板、浏览器、工具下载和发行目标。
 
 ## 1. 结论
 
 pi 选择“核心统一为 Bash，外围能力按宿主系统适配”。Windows 用户必须提供 Bash；核心工具因此能继续使用 POSIX 风格命令，而子进程、路径、TTY、剪贴板、浏览器和二进制分发分别做平台分支。
+
+本轮开始在 Coding Agent bundle 中携带 Node runtime，托管安装支持原地升级，并将默认快捷键调整为更适合 Windows Terminal 的组合。Bash 仍是 Windows 命令前置条件；自带 Node 解决的是 JavaScript runtime 分发，不是 Shell 方言替换。
 
 ## 2. Windows 上如何获得 Bash
 

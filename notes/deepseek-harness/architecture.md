@@ -4,6 +4,8 @@
 >
 > 2026-08-19 增量复核版本：`main@99f6f02fecdb`。本次变更未改变 Cordis Service/Provider/Consumer 主架构，主要是 replay、PTY、Web UI 和发布边界修复。
 >
+> 2026-08-24 增量复核版本：`main@b150a551b8d4`（`dsh 0.1.1-rc.2`）。图片 admission、持久化引用、Files/inline 请求和 `read_image` 被统一到同一插件链，主架构仍未改变。
+>
 > 当前项目处于 Developer Preview。本文描述此提交上的实现与不变量，不承诺后续版本保持相同包边界和配置格式。
 
 ## 1. 真正的核心不是某个 Agent Loop，而是可组合运行时

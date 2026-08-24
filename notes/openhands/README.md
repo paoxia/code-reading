@@ -3,6 +3,8 @@
 > 原始研究版本：`OpenHands/OpenHands main@e6c90d6`（2026-08-13）
 >
 > 2026-08-19 增量复核版本：`main@551e9a9ee6cc`
+>
+> 2026-08-24 增量复核版本：`main@861e9ef50173`（Agent Canvas `1.15.0`）
 
 ## 研究范围
 
@@ -12,6 +14,8 @@
 
 增量版本进一步说明 Canvas 是“事件投影”而不是执行引擎：WebSocket 层会批量合并高频 `StreamingDeltaEvent`，再交给 store，避免快速模型输出拖垮 UI，见
 [`streaming-delta-batcher.ts`](../../code/openhands/src/utils/streaming-delta-batcher.ts)。Files 页显式显示 workspace path，Automation 界面则改为完全由 manifest 决定是否对客户端暴露，不再由散落路由自行猜测后端能力。
+
+2026-08-24 的变化继续发生在 Canvas/Agent Server 边界：本地设置页可管理受支持的 LLM Provider Connections；`disabled_skills` 会通过 agent context 传给后端；conversation WebSocket 在 query refetch 时保持连接，并为握手设置上限；新增 Overview/Commits drawer 统一展示项目状态。实现见 [`provider-connections-service.api.ts`](../../code/openhands/src/api/provider-connections-service/provider-connections-service.api.ts)、[`agent-server-adapter.ts`](../../code/openhands/src/api/agent-server-adapter.ts) 和 [`conversation-websocket-context.tsx`](../../code/openhands/src/contexts/conversation-websocket-context.tsx)。这些能力仍是控制面，不证明本仓库实现了 Agent loop。
 
 ## 整体架构
 

@@ -1,12 +1,16 @@
 # DeerFlow 2.0 深度架构与执行链分析
 
-> 源码版本：`main@c542185a7f71`
+> 原始研究版本：`main@c542185a7f71`
+>
+> 2026-08-24 增量复核版本：`main@cc6a2657e7ba`
 >
 > 本文只描述当前 2.0 主线已落地的实现。`docs/plans/`、RFC 和 `TODO` 中尚未进入主链的内容不作为现状。
 
 ## 1. 从“Agent 框架”到“长任务运行平台”
 
 DeerFlow 的核心 Agent 并不庞大：[`make_lead_agent()`](../../code/deer-flow/backend/packages/harness/deerflow/agents/lead_agent/agent.py) 最终仍调用 LangChain `create_agent()`。复杂性主要来自 Agent 外围的运行保障：Gateway 接收请求、RunManager 争抢执行权、Worker 构造运行上下文、Checkpointer 恢复线程状态、Middleware 改写模型与工具阶段、StreamBridge 发布事件，最后再把产物和交付信息固化。
+
+本轮新增 managed subagent store、delegation scope、tool receipt ledger 与 sandbox acquisition authorization，进一步强化“运行控制层决定所有权和审计，Agent 能力层执行模型循环”的分层；`make_lead_agent()` 仍是装配入口，没有被新的独立 orchestrator 取代。
 
 因此，理解 DeerFlow 应分成三层：
 

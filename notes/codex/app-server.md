@@ -3,10 +3,14 @@
 > 原始研究版本：`code/codex@28aacbb`
 >
 > 2026-08-19 增量复核版本：`code/codex@f5a3dc55404d`
+>
+> 2026-08-24 增量复核版本：`code/codex@339751715c64`
 
 ## 1. 定位
 
 App Server 是 Codex Core 的长驻控制面。它通过 JSON-RPC transport 向桌面端、IDE 或其他客户端暴露 thread/turn、配置、账户、MCP、文件系统、进程和扩展能力。它不重新实现 Agent loop；真正的推理、工具与 rollout 在 Core，App Server 负责协议校验、对象管理、事件投影和多连接生命周期。
+
+本轮增加 Amazon Bedrock setup、browser/computer-use requirements、Guardian internal session 与 task 管理事件，并支持未完成 root turn suspension。能力面扩大后，App Server 仍通过 request processor 调用 Core；新增状态没有形成第二套 Agent loop。
 
 协议类型位于 [`app-server-protocol`](../../code/codex/codex-rs/app-server-protocol)，服务实现位于 [`app-server`](../../code/codex/codex-rs/app-server)。
 

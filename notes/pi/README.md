@@ -4,6 +4,8 @@
 >
 > 2026-08-19 增量复核版本：`main@ed867e909479`（`@earendil-works/pi-* 0.84.2`）
 >
+> 2026-08-24 增量复核版本：`main@4af9d21d3b4d`（`@earendil-works/pi-coding-agent 0.84.2`）
+>
 > 研究重点：`packages/ai`、`packages/agent`、`packages/coding-agent` 和
 > `packages/tui`。`packages/orchestrator` 的包描述明确标注为 experimental，本文只说明
 > 它的边界，不把它当成主运行时。
@@ -17,6 +19,8 @@
 ## 1. 先给结论
 
 pi 最值得学习的不是某一个工具，而是它把 Coding Agent 拆成了三层：
+
+本轮没有改变三层主线或 `AgentHarness` 的 scaffold 边界，但产品分发明显增强：Coding Agent bundle 开始携带 Node runtime，托管安装可原地升级；`/model` 与 thinking level 的修改保持 session-scoped，只有显式保存才进入设置；模型配置可覆盖 finish reason compatibility。实现见 [`build-coding-agent-bundle.mjs`](../../code/pi/scripts/build-coding-agent-bundle.mjs)、[`package-manager-cli.ts`](../../code/pi/packages/coding-agent/src/package-manager-cli.ts)、[`agent-session.ts`](../../code/pi/packages/coding-agent/src/core/agent-session.ts) 与 [`model-config.ts`](../../code/pi/packages/coding-agent/src/core/model-config.ts)。
 
 ```text
 runAgentLoop()       纯执行循环：LLM → tool → LLM

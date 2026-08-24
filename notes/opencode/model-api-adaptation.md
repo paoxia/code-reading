@@ -2,7 +2,7 @@
 
 ## 结论
 
-当前 opencode 在 `@opencode-ai/llm` 内实现了分层协议栈：canonical schema → provider facade → route/auth/transport → protocol lowering/parsing。上层 Session Runner 只处理统一 `LLMRequest` 和 `LLMEvent`，厂商差异被限制在 provider 与 protocol 模块。原始研究版本：`d36a2d8`；2026-08-19 增量复核至 `da4730e4`，本次 pull 未改变该分层。
+当前 opencode 在 `@opencode-ai/llm` 内实现了分层协议栈：canonical schema → provider facade → route/auth/transport → protocol lowering/parsing。上层 Session Runner 只处理统一 `LLMRequest` 和 `LLMEvent`，厂商差异被限制在 provider 与 protocol 模块。原始研究版本：`d36a2d8`；2026-08-19 增量复核至 `da4730e4`，2026-08-24 再复核至 `03521003`，该分层仍未改变。新修复只在确认目标是 `@ai-sdk/openai-compatible` provider 时注入 `textVerbosity`，避免把 OpenAI 专有参数误传给其他兼容 facade。
 
 ## 分层结构
 

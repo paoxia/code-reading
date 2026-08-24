@@ -4,6 +4,8 @@
 >
 > 2026-08-19 增量复核版本：`main@99f6f02fecdb`（`dsh 0.1.0-rc.7`）
 >
+> 2026-08-24 增量复核版本：`main@b150a551b8d4`（`dsh 0.1.1-rc.2`）
+>
 > 研究范围：Developer Preview 主线的 Cordis 插件架构、配置组合、Agent Loop、Session Event Log、能力接缝、运行 Preset 与扩展机制。
 
 进一步阅读：[DeepSeek Harness 深度架构与运行时分析](./architecture.md)。
@@ -17,6 +19,8 @@ DeepSeek Harness（CLI 命令为 `dsh`）不是“给 DeepSeek 模型套一组�
 增量复核确认插件化主架构未变，但交互和恢复边界有两项可见更新：Ask User 问题卡可收起，实现见
 [`QuestionComposer.tsx`](../../code/deepseek-harness/packages/client/ui-user-questions/src/client/QuestionComposer.tsx)；LLM replay 会把恢复状态与已组装 content 对齐，遇到不可用状态时降级，避免 max-token continuation 重放出错，见
 [`replay.ts`](../../code/deepseek-harness/packages/llm/llm-pi-ai/src/replay.ts)。
+
+2026-08-24 的核心变化是图片链路统一：本地 attachment、DeepSeek Files 和模型请求共享 canonical admission/encoding，`read_image` 会返回下采样尺寸与坐标缩放；Files 解析失败可以回退 inline，同时文件上传和 stream timeout 分开计算。实现见 [`read-image.ts`](../../code/deepseek-harness/packages/fs/tool-fs/src/read-image.ts) 与 [`llm-deepseek/src/index.ts`](../../code/deepseek-harness/packages/llm/llm-deepseek/src/index.ts)。这扩展了 Attachment/LLM plugin 的合同，没有改变 Cordis 组合方式。
 
 核心设计可以概括为：
 
