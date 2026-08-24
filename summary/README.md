@@ -12,3 +12,7 @@
 ## Agent 上下文管理
 
 - [Agent 上下文管理机制横向总结](./context-management/agent-context-management.md)
+
+## Agent Harness
+
+- [Agent Harness 设计与有效性验证](./agent-harness/design-and-validation.md)
