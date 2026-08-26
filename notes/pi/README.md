@@ -279,6 +279,8 @@ Entry 通过 `parentId` 形成追加树，lane 保存各自游标。`Session.vie
 
 ## 9. 当前 `pi-coding-agent` 如何组装产品
 
+### 9.1 启动装配
+
 [`createAgentSession()`](../../code/pi/packages/coding-agent/src/core/sdk.ts) 是当前最重要的产品
 组装入口：
 
@@ -316,16 +318,107 @@ CLI 的 [`main()`](../../code/pi/packages/coding-agent/src/main.ts) 创建 cwd-b
 `/fork` 时销毁旧 session 与扩展上下文，重建 cwd-bound services，然后让 UI rebind；这比
 只替换一个消息数组更安全。
 
+### 9.2 一次产品级 Prompt 的完整调用链
+
+真正的产品调用并不是直接执行 `runAgentLoop()`。从用户输入到运行收口，路径是：
+
+```text
+AgentSession.prompt(text, options)
+  ├─ input extension：handled / transform / continue
+  ├─ 处理 extension command
+  ├─ 展开 /skill:name 与 prompt template
+  ├─ 运行中输入显式映射为 steer 或 followUp
+  ├─ 校验 model/auth，并在必要时先做 compaction
+  ├─ 合并 nextTurn custom messages
+  ├─ before_agent_start 可追加消息或覆盖本轮 system prompt
+  └─ _runAgentPrompt(messages)
+          │
+          ▼
+Agent.prompt()
+  ├─ 拒绝第二个并发普通 prompt
+  ├─ createContextSnapshot()
+  ├─ createLoopConfig()
+  └─ runAgentLoop()
+          │
+          ▼
+模型流 → Tool batch → ToolResult → 下一 Provider turn
+          │
+          ▼
+Agent.processEvents()
+  ├─ 归约 messages / streamingMessage / pendingToolCalls
+  └─ 按订阅顺序等待 listener
+          │
+          ▼
+AgentSession._handleAgentEvent()
+  ├─ 转发 extension 与产品事件
+  ├─ message_end 写入 SessionManager
+  └─ 收集 retry / compaction 所需状态
+          │
+          ▼
+_handlePostAgentRun()
+  ├─ retryable error → 准备重试
+  ├─ threshold/overflow → 自动 compaction
+  ├─ agent_end Hook 新增了队列消息 → continue
+  └─ _emitAgentSettled()
+```
+
+对应入口是
+[`AgentSession.prompt()`](../../code/pi/packages/coding-agent/src/core/agent-session.ts)、
+[`Agent.prompt()`](../../code/pi/packages/agent/src/agent.ts) 和
+[`runAgentLoop()`](../../code/pi/packages/agent/src/agent-loop.ts)。这条链说明 `AgentSession`
+不是一个薄 SDK Facade：它负责输入准入和产品后处理，`Agent` 负责单次内存运行，Loop 才负责
+模型与工具的纯编排。
+
+### 9.3 四层状态所有权
+
+| 层 | 拥有的状态 | 生命周期 | 不负责什么 |
+|---|---|---|---|
+| `runAgentLoop()` | 本次调用的 context、config、new messages、当前 Tool batch | 单次运行 | 持久化、UI、资源发现 |
+| `Agent` | 内存 transcript、流式消息、Tool pending set、steer/follow-up 队列、AbortController | 进程内 Agent 实例 | Session tree、Compaction、工作区恢复 |
+| `AgentSession` | 产品队列视图、Tool Registry、Extension、Retry/Compaction、System Prompt、模型切换 | 当前产品 Session | 跨进程 operation 恢复、强制沙箱 |
+| `SessionManager` | 追加式 Entry tree、当前 branch、模型/Thinking/Compaction 等持久事实 | Session 文件 | 运行到一半的完整程序计数器、文件/Git 状态 |
+
+`Agent` 在开始运行时复制 message/tool 数组形成 Turn Snapshot；`AgentSession` 又安装
+`prepareNextTurnWithContext`，在下一个安全 Turn 边界刷新当前 model、thinking、system prompt
+和 tools。因此运行中配置可以变化，但不会修改已经发出的 Provider Request。
+
+当前旧产品链是“事件驱动 + `message_end` 时追加 Session”：`AgentSession._handleAgentEvent()`
+先调用 Extension 和产品监听器，再由 `SessionManager.appendMessage()` 落盘。它不是严格的
+“先提交 durable event，再通知所有观察者”模型；这也是新 Harness 要把 operation record、
+Reducer 和恢复协议下沉到通用运行时的原因之一。
+
 ## 10. 工具、扩展与执行环境
+
+### 10.1 Tool Registry 与调用拦截
 
 Coding Agent 内置 read、bash、edit、write、grep、find、ls 等工具，入口在
 [`core/tools`](../../code/pi/packages/coding-agent/src/core/tools)。SDK 支持 allowlist、denylist
 和 `noTools`，并在创建实际 cwd-bound 工具后再应用过滤。
 
+`AgentSession` 把 Extension 的 `tool_call`/`tool_result` 事件安装到 `Agent.beforeToolCall` 和
+`afterToolCall`。它们可以阻断调用、修改结果和规范化图片，但仍是进程内应用门禁，不等于
+OS 沙箱或远端系统权限。
+
+### 10.2 Skill 与 Extension 不是同一种扩展
+
+当前产品路径中的 Skill 更接近可发现的 Prompt 资源。用户输入 `/skill:name args` 后，
+`AgentSession` 找到对应文件、去掉 frontmatter，将正文包装成带 name/location 的 `<skill>`
+块，再把参数附在后面送入普通 Prompt。Skill 本身不会注册执行器，也不会自动获得新 Tool
+权限。
+
 扩展系统位于
 [`core/extensions`](../../code/pi/packages/coding-agent/src/core/extensions)，能注册工具、命令、
 Provider 和 UI 行为。产品层的 `ExtensionRunner` 被接入 context、Provider headers/payload、
 工具调用、Session 生命周期等位置。
+
+因此两者的可信边界不同：
+
+| 机制 | 本质 | 能力范围 | 安全含义 |
+|---|---|---|---|
+| Skill | 被注入上下文的指令和参考材料 | 影响模型规划，使用当前已开放 Tool | 不是权限边界，正文应视为 Prompt 输入 |
+| Extension | 进程内可信插件代码 | 注册 Tool/命令/Provider，拦截输入、请求、Tool 和 Session 事件 | 与宿主进程同权限，需要可信来源和加载策略 |
+
+### 10.3 ExecutionEnv 是可替换执行边界
 
 新 Harness 又抽象出
 [`ExecutionEnv`](../../code/pi/packages/agent/src/harness/types.ts)，把文件系统和 Shell 能力放进

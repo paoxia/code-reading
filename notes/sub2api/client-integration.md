@@ -172,11 +172,11 @@ WebSocket 模式不是简单地把 HTTP 请求换成另一个 URL：
 1. 客户端对 `GET /v1/responses`、`GET /responses` 或 `GET /backend-api/codex/responses` 发起 WebSocket Upgrade。
 2. 后端要求首条消息是合法的 `response.create` JSON，并从中提取模型。
 3. 每个 turn 独立执行安全检查、用户并发、账号并发、调度和计费。
-4. OpenAI 分组要求被选账号支持 Responses WSv2；Grok 分组则把入站 WS 桥接到其 HTTP/SSE Responses 上游。
+4. OpenAI 分组要求被选账号支持 Responses WSv2；Grok 的控制台 Codex preset 则明确关闭 WebSocket，使用 HTTP/SSE Responses。
 
 入口实现位于 [`OpenAIGatewayHandler.ResponsesWebSocket`](../../code/sub2api/backend/internal/handler/openai_gateway_handler.go)，连接内转发位于 [`openai_ws_forwarder_ingress.go`](../../code/sub2api/backend/internal/service/openai_ws_forwarder_ingress.go)。账号级 WSv2 开关和模式定义在 [`account.go`](../../code/sub2api/backend/internal/service/account.go)。
 
-HTTP Responses 路径明确拒绝 `previous_response_id`，要求它只能用于 WSv2；因此需要多轮 Responses 原生续链时，应使用 WebSocket 配置。
+HTTP Responses 路径已经支持 `previous_response_id`，但会先验证该 `response.id` 是否属于当前用户和 API Key，并且 OpenAI 平台只能调度到 API Key 账号；OAuth/Setup Token 的 ChatGPT Codex 上游仍不支持这条 HTTP 续接路径。WSv2 对连接内多轮和 `function_call_output` 续接更完整，但不再是所有 `previous_response_id` 的唯一入口。
 
 ### 5.4 两种 Codex 认证模式
 
@@ -343,7 +343,240 @@ Claude Code 最终访问 `/antigravity/v1/messages`。这个专用路由通过 `
 
 项目 README 还描述了 Antigravity 混合调度：开启后通用 `/v1/messages` 也可能调度 Antigravity 账号。但源码和 README 都提醒 Anthropic Claude 与 Antigravity Claude 不应在同一上下文中混用，见 [`README_CN.md`](../../code/sub2api/README_CN.md)。
 
-### 6.3 Claude Code 客户端识别与限制
+### 6.3 Claude Code 请求如何适配并转发到 Codex
+
+这一节描述的不是“Sub2API 启动一个本地 Codex CLI”，而是下面这条服务端协议桥：
+
+```text
+Claude Code
+  → Anthropic Messages HTTP/SSE
+  → Sub2API 鉴权、模型映射和账号调度
+  → OpenAI Responses HTTP/SSE
+  → OpenAI API 或 ChatGPT Codex 内部接口
+  → Responses 事件转回 Anthropic 事件
+  → Claude Code
+```
+
+其中 Claude Code 仍负责在用户机器上执行 `Read`、`Bash`、`Edit` 等工具；Codex 只负责远端推理并产生 function call；Sub2API 负责双向协议转换和上游凭据托管。
+
+#### 6.3.1 入口、准入和账号选择
+
+Claude Code 始终请求：
+
+```http
+POST /v1/messages
+Authorization: Bearer <Sub2API 用户 API Key>
+```
+
+路由层发现 Key 对应的是 OpenAI-compatible Group 后，将请求交给 [`OpenAIGatewayHandler.Messages`](../../code/sub2api/backend/internal/handler/openai_gateway_handler.go)，而不是原生 Anthropic 的 `GatewayHandler.Messages`。Handler 依次执行：
+
+1. 检查 Group 是否允许 Messages 调度；普通 OpenAI Group 必须显式打开 `allow_messages_dispatch`。
+2. 解析 Anthropic JSON，提取 `model` 和 `stream`。
+3. 用 `messages_dispatch_model_config`、`default_mapped_model` 和账号级映射确定目标 GPT/Codex 模型。
+4. 执行安全策略、用户并发准入和二次计费资格检查。
+5. 从请求 metadata、客户端信息和 API Key 生成 session hash 与 prompt cache key。
+6. 调用 `SelectAccountWithSchedulerForCapability`，按模型能力、账号状态、并发、负载、粘性会话和失败排除列表选择 OpenAI OAuth/API Key 账号。
+7. 取得账号并发槽位后，调用 [`OpenAIGatewayService.ForwardAsAnthropic`](../../code/sub2api/backend/internal/service/openai_gateway_messages.go)。
+
+关键调用链可以简化为：
+
+```text
+gateway.POST("/messages")
+  → OpenAIGatewayHandler.Messages
+  → resolveOpenAIMessagesDispatchMappedModel
+  → SelectAccountWithSchedulerForCapability
+  → OpenAIGatewayService.ForwardAsAnthropic
+```
+
+这里至少存在三个模型名，不能混为一个值：
+
+| 名称 | 含义 |
+|---|---|
+| `originalModel` | Claude Code 原始请求的 Claude 模型名 |
+| `billingModel` | Sub2API 映射后用于计费和日志的模型名 |
+| `upstreamModel` | 最终写入 Responses 请求、实际发给 Codex 上游的模型名 |
+
+例如 `claude-sonnet-4-5` 可以由分组规则映射成 `gpt-5.3-codex`；这不是代码内固定替换，而是由当前 Group 和 Account 配置共同决定。
+
+#### 6.3.2 Anthropic Messages 如何转换成 Responses
+
+`ForwardAsAnthropic` 把请求反序列化为 `apicompat.AnthropicRequest`，完成模型映射、缓存键推导和兼容性裁剪后调用：
+
+```go
+responsesReq, err := apicompat.AnthropicToResponses(&anthropicReq)
+```
+
+转换器位于 [`anthropic_to_responses.go`](../../code/sub2api/backend/internal/pkg/apicompat/anthropic_to_responses.go)，主要映射如下：
+
+| Anthropic Messages | OpenAI Responses |
+|---|---|
+| `system` 文本块 | `input` 中 `role=developer` 的 `input_text` |
+| user text | `role=user` 的 `input_text` |
+| user image | `input_image` |
+| assistant text | `role=assistant` 的 `output_text` |
+| `tool_use` | `function_call` |
+| `tool_result` | `function_call_output` |
+| `tool_use.id` / `tool_result.tool_use_id` | `function_call.call_id` / `function_call_output.call_id` |
+| 带 signature 的 `thinking` | 带 `encrypted_content` 的 `reasoning` item |
+| `tools[].input_schema` | function tool 的 `parameters` |
+| `tool_choice.type=any` | `tool_choice=required` |
+| `max_tokens` | `max_output_tokens`，并应用 Responses 最小值保护 |
+| `output_config.effort=max` | `reasoning.effort=xhigh` |
+
+Claude Code 注入到 system 中的 `x-anthropic-billing-header` 归因块会被过滤，不发送给 Codex；普通 system 内容则保留为 developer input，以维持对话和 prompt cache 的前缀形态。
+
+转换器默认请求 `reasoning.encrypted_content`，并设置 `store=false`、`parallel_tool_calls=true`。上游始终使用 streaming，即使 Claude Code 请求 `stream=false`；区别只在返回阶段是实时转换 SSE，还是先缓冲完整 Responses 流再组装 Anthropic JSON。
+
+一个简化后的转换结果如下：
+
+```json
+{
+  "model": "gpt-5.3-codex",
+  "input": [
+    {
+      "type": "message",
+      "role": "developer",
+      "content": [{"type": "input_text", "text": "You are Claude Code..."}]
+    },
+    {
+      "type": "message",
+      "role": "user",
+      "content": [{"type": "input_text", "text": "读取 src/App.java"}]
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "name": "Read",
+      "parameters": {
+        "type": "object",
+        "properties": {"file_path": {"type": "string"}}
+      }
+    }
+  ],
+  "include": ["reasoning.encrypted_content"],
+  "parallel_tool_calls": true,
+  "store": false,
+  "stream": true
+}
+```
+
+#### 6.3.3 ChatGPT Codex OAuth 协议的二次适配
+
+通用 Messages → Responses 转换完成后，如果调度到的是 OpenAI OAuth 或 Setup Token 账号，`account.UsesOpenAICodexProtocol()` 为真，系统继续调用：
+
+```go
+applyCodexOAuthTransformWithOptions(reqBody, codexOAuthTransformOptions{
+    SkipDefaultInstructions: true,
+    PreserveToolCallIDs:     true,
+})
+```
+
+这一层不是再次转换协议，而是把通用 Responses 请求收敛成 ChatGPT Codex 内部接口接受的形态，主要包括：
+
+- 规范化模型名、reasoning、工具声明和不兼容字段；
+- 保留原始 tool call ID，确保 Claude Code 下一轮回传的 `tool_result.tool_use_id` 能匹配 Codex 的 `call_id`；
+- 建立工具名反向映射，使上游规范化过的名称返回客户端时恢复为 Claude Code 原名；
+- 保证 `instructions` 字段存在，并按配置应用 `ForcedCodexInstructionsTemplate`；
+- 注入按上游账号和 Sub2API API Key 隔离的 `client_metadata`；
+- 提取 prompt cache key 和 turn state，但删除不应直接出现在 ChatGPT Codex body 中的 `prompt_cache_key`。
+
+`PreserveToolCallIDs` 是工具闭环的关键约束：
+
+```text
+Codex function_call.call_id
+  → Claude tool_use.id
+  → Claude Code 本地执行工具
+  → Claude tool_result.tool_use_id
+  → Codex function_call_output.call_id
+```
+
+任何一段重写了 ID，下一轮 Codex 都无法把工具结果关联到原始调用。
+
+#### 6.3.4 上游凭据、URL 和会话隔离
+
+请求体准备完成后，`getRequestCredential` 读取调度账号的真实凭据，再由 [`buildUpstreamRequest`](../../code/sub2api/backend/internal/service/openai_gateway_forward.go) 按账号类型选择上游：
+
+| 上游账号 | 目标地址 | 认证 |
+|---|---|---|
+| OpenAI API Key | `https://api.openai.com/v1/responses` 或账号自定义 Base URL | `Authorization: Bearer <真实 API Key>` |
+| OpenAI OAuth | `https://chatgpt.com/backend-api/codex/responses` | `Authorization: Bearer <真实 OAuth Token>` |
+| OpenAI Setup Token | ChatGPT Codex 内部 Responses 地址 | Setup Token 对应的 Bearer 认证 |
+| 不支持 Responses 的兼容 API Key | 进入 Responses → Chat Completions 回退 | 账号 API Key |
+
+客户端入站的 Sub2API Key 不会直接转发给 OpenAI。它只用于定位用户、Group 和计费上下文；真正的出站 `Authorization` 来自管理员托管的 Account。
+
+ChatGPT Codex 请求还会设置或收敛：
+
+```text
+Host: chatgpt.com
+originator
+version
+User-Agent
+session_id
+conversation_id
+x-codex-turn-state
+ChatGPT-Account-Id
+```
+
+Sub2API 不直接复用客户端原始 session，而是按“Sub2API API Key + 上游账号身份 + 客户端会话”生成隔离后的 `session_id`/`conversation_id`。这样可以避免两个用户使用相同客户端 session 时在上游碰撞，也避免 failover 换账号后把上一份 OAuth 凭据铸造的会话状态原样交给另一账号。
+
+最终网络调用是：
+
+```go
+resp, err := s.doOpenAIUpstream(upstreamReq, proxyURL, account)
+```
+
+因此这里的“转发给 Codex”是通过 HTTP 请求 OpenAI Responses 或 ChatGPT Codex 内部 API，不是执行本机 `codex` 命令，也不是与另一个 Codex CLI 进程通信。
+
+#### 6.3.5 Responses 流如何转换回 Claude Code
+
+Codex 上游返回的是 Responses SSE，例如：
+
+```text
+response.created
+response.output_item.added
+response.reasoning_summary_text.delta
+response.output_text.delta
+response.function_call_arguments.delta
+response.output_item.done
+response.completed
+```
+
+[`handleAnthropicStreamingResponse`](../../code/sub2api/backend/internal/service/openai_gateway_messages.go) 逐行解析为 `ResponsesStreamEvent`，再调用 [`ResponsesEventToAnthropicEvents`](../../code/sub2api/backend/internal/pkg/apicompat/responses_to_anthropic.go) 生成 Claude Code 能识别的事件：
+
+| Responses SSE | Anthropic SSE |
+|---|---|
+| `response.created` | `message_start` |
+| `response.output_text.delta` | `content_block_delta/text_delta` |
+| `response.output_item.added(function_call)` | `content_block_start/tool_use` |
+| `response.function_call_arguments.delta` | `content_block_delta/input_json_delta` |
+| `response.reasoning_summary_text.delta` | `content_block_delta/thinking_delta` |
+| reasoning `encrypted_content` | `signature_delta` |
+| `response.completed` | `message_delta` + `message_stop` |
+
+该转换是有状态的：`ResponsesEventToAnthropicState` 会记录 message 是否开始、当前 content block 类型和索引、工具参数累积、thinking signature、token/cache token 以及最终应使用 `end_turn` 还是 `tool_use`。如果上游流没有正常发出终止事件，`FinalizeResponsesAnthropicStream` 会在可能的情况下补齐关闭事件。
+
+如果 Claude Code 请求非流式，系统仍读取完整 Responses SSE，用 accumulator 重建终态 response，再通过 `ResponsesToAnthropic` 返回普通 Anthropic JSON。
+
+#### 6.3.6 工具调用闭环和失败边界
+
+一次 `Read` 工具调用实际经历：
+
+```text
+1. Codex 返回 function_call(name=Read, call_id=toolu_123)
+2. Sub2API 转成 Anthropic tool_use(id=toolu_123)
+3. Claude Code 在用户机器上执行 Read
+4. Claude Code 下一轮返回 tool_result(tool_use_id=toolu_123)
+5. Sub2API 转成 function_call_output(call_id=toolu_123)
+6. 再次请求 Codex
+```
+
+所以 Codex 后端不能直接读取用户本地文件；它只决定调用什么工具。真正的文件、Shell 和编辑操作仍由 Claude Code 执行。
+
+上游在尚未向客户端输出语义事件前失败时，Handler 可以把账号加入排除列表，再选择其他账号；一旦已经输出文本、thinking 或 tool block，继续 failover 会把两个模型的流拼在一起，因此代码会改为向 Claude Code 发送 Anthropic 格式错误，而不是静默换号。无论客户端是否中途断开，系统都会尽量继续排空已经产生的上游流，以提取实际 usage 并按有界任务池记录计费。
+
+### 6.4 Claude Code 客户端识别与限制
 
 在进入原生 [`GatewayHandler.Messages`](../../code/sub2api/backend/internal/handler/gateway_handler.go) 的 Anthropic/Antigravity 等路径中，Sub2API 不只检查 `User-Agent`。对于 `/v1/messages`，当前 `ClaudeCodeValidator` 要求：
 
@@ -425,10 +658,8 @@ name = "Sub2API Grok"
 base_url = "https://sub2api.example.com/v1"
 env_key = "SUB2API_API_KEY"
 wire_api = "responses"
-supports_websockets = true
-
-[features]
-responses_websockets_v2 = true
+requires_openai_auth = false
+supports_websockets = false
 ```
 
 启动 Codex 前设置：
@@ -437,7 +668,7 @@ responses_websockets_v2 = true
 export SUB2API_API_KEY="sk-your-sub2api-key"
 ```
 
-这里虽然客户端启用了 WebSocket，但后端对 Grok 分组选择 HTTP/SSE 上游，并在 Sub2API 内完成 WS 入站桥接。
+Grok 的当前控制台 preset 明确关闭 WebSocket，Codex 直接通过 Sub2API 的 HTTP/SSE Responses 入口访问 Grok；不要照搬 OpenAI Group 的 `responses_websockets_v2` 配置。
 
 ### 7.4 OpenCode
 
@@ -584,7 +815,7 @@ underscores_in_headers on;
 | `/v1/messages` 返回 403 | OpenAI 分组是否开启 `allow_messages_dispatch` | 该开关默认关闭；Grok 例外 |
 | Claude Code only 限制错误 | 是否为官方 Claude Code 请求；是否配置 fallback group | 服务端会检查 UA、system、Header 和 metadata |
 | Codex WS 连接失败 | 反向代理 Upgrade、账号 WSv2 开关、Key 并发限制 | WS 入口和每个 turn 都有独立容量检查 |
-| HTTP Responses 携带 `previous_response_id` 被拒绝 | 改用 WSv2 | 当前实现只允许 WSv2 原生续链 |
+| HTTP Responses 的 `previous_response_id` 被拒绝 | 检查 response ID 所有权和选中账号类型；需要 OAuth/Setup Token 连接内续链时改用 WSv2 | HTTP 会校验 response 是否属于当前用户/API Key，且 OpenAI 平台只允许 API Key 账号承接 HTTP continuation |
 | `No available accounts` | 分组账号、模型映射、账号状态、并发、配额和传输能力 | 有账号不等于该账号支持当前模型/端点 |
 | Claude Code 能连但工具行为异常 | 最终上游模型和 Messages 映射 | OpenAI/Grok 桥是协议转换，不保证模型能力完全等同 Claude |
 | Codex 多轮任务粘性异常 | Nginx `underscores_in_headers`、`session_id`、代理头 | 丢失会话头会降低粘性命中 |
