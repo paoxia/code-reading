@@ -8,3 +8,11 @@
 
 - [2026-08-24 上游源码更新复核](./coding-agents/2026-08-24-source-update.md)
 - [Coding Agent 跨平台适配总览](./coding-agents/cross-platform-adaptation.md)
+
+## Agent 上下文管理
+
+- [Agent 上下文管理机制横向总结](./context-management/agent-context-management.md)
+
+## Agent Harness
+
+- [Agent Harness 设计与有效性验证](./agent-harness/design-and-validation.md)
