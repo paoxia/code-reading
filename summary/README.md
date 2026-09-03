@@ -13,6 +13,10 @@
 
 - [Agent 上下文管理机制横向总结](./context-management/agent-context-management.md)
 
+## Agent Tool Runtime
+
+- [Agent Tool 调用与错误处理横向总结](./agent-tools/tool-execution-and-error-handling.md)
+
 ## Agent Harness
 
 - [Agent Harness 设计与有效性验证](./agent-harness/design-and-validation.md)
