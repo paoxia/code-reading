@@ -1,10 +1,12 @@
 # DeepSeek Harness 源码分析
 
-> 原始研究版本：`main@47f943859bef`
+> 原始研究版本：`master@47f943859bef`
 >
-> 2026-08-19 增量复核版本：`main@99f6f02fecdb`（`dsh 0.1.0-rc.7`）
+> 2026-08-19 增量复核版本：`master@99f6f02fecdb`（`dsh 0.1.0-rc.7`）
 >
-> 2026-08-24 增量复核版本：`main@b150a551b8d4`（`dsh 0.1.1-rc.2`）
+> 2026-08-24 增量复核版本：`master@b150a551b8d4`（`dsh 0.1.1-rc.2`）
+>
+> 2026-09-03 增量复核版本：`master@49a606bc5b59`（`dsh 0.1.2-alpha.5`）
 >
 > 研究范围：Developer Preview 主线的 Cordis 插件架构、配置组合、Agent Loop、Session Event Log、能力接缝、运行 Preset 与扩展机制。
 
@@ -21,6 +23,8 @@ DeepSeek Harness（CLI 命令为 `dsh`）不是“给 DeepSeek 模型套一组�
 [`replay.ts`](../../code/deepseek-harness/packages/llm/llm-pi-ai/src/replay.ts)。
 
 2026-08-24 的核心变化是图片链路统一：本地 attachment、DeepSeek Files 和模型请求共享 canonical admission/encoding，`read_image` 会返回下采样尺寸与坐标缩放；Files 解析失败可以回退 inline，同时文件上传和 stream timeout 分开计算。实现见 [`read-image.ts`](../../code/deepseek-harness/packages/fs/tool-fs/src/read-image.ts) 与 [`llm-deepseek/src/index.ts`](../../code/deepseek-harness/packages/llm/llm-deepseek/src/index.ts)。这扩展了 Attachment/LLM plugin 的合同，没有改变 Cordis 组合方式。
+
+2026-09-03 的复核仍确认 Cordis、事件事实源和能力接缝三条主线不变，但产品装配和持久化边界已经收紧：所有受支持的 Node 应用统一由 `dsh --profile` 启动；Agent Preset 被打包进独立 package，`code` 正式更名为 `ptc`；Session persistence 改为每 Session 一个 handle 的单写者模型，目前只有 JSONL 是第一方 Session 后端；子 Agent 可以在 Session 记录的白名单内选择模型。实验性的 Agent Teams 已实现持久 mailbox 与 task board，但明确排除在正式发行物之外。
 
 核心设计可以概括为：
 
@@ -65,7 +69,7 @@ CLI 入口从 [`apps/cli/src/bin.ts`](../../code/deepseek-harness/apps/cli/src/b
   → 命令行 --patch
 ```
 
-基础层 [`packages/bundle/base/cordis.patch.yml`](../../code/deepseek-harness/packages/bundle/base/cordis.patch.yml) 提供模型、Session、工具注册表、执行后端、持久化、安全策略等 Host Plane 能力；Web 和 Headless 分别由 [`bundle/web-app`](../../code/deepseek-harness/packages/bundle/web-app) 与 [`bundle/headless`](../../code/deepseek-harness/packages/bundle/headless) 追加。
+基础层 [`packages/bundle/base/cordis.patch.yml`](../../code/deepseek-harness/packages/bundle/base/cordis.patch.yml) 提供模型、Session、工具注册表、执行后端、持久化、安全策略等 Host Plane 能力；Web、Headless、SDK 和 ACP 再叠加各自的应用 Bundle。`sdk-minimal` 是例外，它由一个独立 Bundle 持有完整显式插件树，不叠加 `base`。受支持的 Node 应用都从 `dsh` 入口选择 `web`、`headless`、`sdk`、`sdk-minimal` 或 `acp` Profile。
 
 可用 `dsh --profile web --dump-config` 查看最终插件树。Patch 按插件 row ID 定位，并替换该 row 的完整 config，而不是递归深合并；自定义覆盖时遗漏字段可能导致原配置丢失。
 
@@ -76,7 +80,7 @@ DeepSeek Harness 特别区分两种生命周期：
 - Host Plane：进程级单例，例如模型路由、持久化、Sandbox policy、Sub-Agent Registry 和 Web Gateway；
 - Agent Plane：某个 Preset/Agent 独有的 Prompt、工具集合、Plan Mode、Compaction 和 Workflow Engine。
 
-Agent Preset 使用 Cordis `isolate` realm 避免不同 Preset 发布同名服务时互相冲突。源码中的说明集中在 [`apps/cli/config/agent-presets/standard/agent.cordis.yml`](../../code/deepseek-harness/apps/cli/config/agent-presets/standard/agent.cordis.yml)。
+Agent Preset 由 [`dsh-agent-presets`](../../code/deepseek-harness/packages/preset/agent-presets) 管理。每种 Preset 挂载一棵 standing composition，使用它的 Session 通过 Scope parentage 加入；工具、Prompt 等贡献按 Scope 可见，插件内部的会话状态仍以 Session/Agent 为 key。需要发布私有 Service 的 row 必须进入 `isolate` realm，避免不同 Preset 的同名服务落到 root realm 后互相冲突。源码中的说明集中在 [`standard/agent.cordis.yml`](../../code/deepseek-harness/packages/preset/agent-presets/presets/standard/agent.cordis.yml)。
 
 这不是形式上的分层：如果把本应在 Host Plane 的 Registry 放进 Agent realm，Web API 或其他 Agent 就无法找到它；如果把 Agent 私有状态放在 Host Plane，多 Preset 会共享错误实例。
 
@@ -114,7 +118,7 @@ Session 定义在 [`packages/core/session/src/index.ts`](../../code/deepseek-har
 Session Event Log
   ├─ deriveMessages() → 下一次模型请求历史
   ├─ Projection       → UI 当前视图
-  ├─ Persistence      → JSONL / SQLite
+  ├─ Persistence      → JSONL Session artifact
   ├─ Resume / Fork    → 恢复与分支
   ├─ Transcript       → 会话记录
   └─ Telemetry        → 统计与诊断
@@ -122,7 +126,7 @@ Session Event Log
 
 “model-visible means logged” 是重要不变量：任何进入模型上下文的输入都必须能从事件日志重建。这样恢复会话时不会依赖只存在内存中的隐藏 Prompt 或注入状态。原始 `assistant/chunk` 也被保留，以支持精确回放和 UI 流式呈现。
 
-持久化不是硬编码实现。`packages/session/session-persistence` 定义协调与 write-behind 语义，具体后端包括 JSONL 与 SQLite；查询层另有基于 SQLite FTS 的全文检索能力。
+持久化不是硬编码在 Loop 中。[`session-persistence`](../../code/deepseek-harness/packages/session/session-persistence) 定义 backend-neutral service 和 `SessionHandle`：`create/open` 取得单写者所有权，`append` 接收连续事件，`flush` 是明确的 durable barrier，`close` 排空写入后释放所有权。当前唯一第一方 Session 后端是 [`session-persistence-jsonl`](../../code/deepseek-harness/packages/session/session-persistence-jsonl)，以每 Session 一个 `.jsonl.zstd` 或纯 JSONL artifact 保存日志。通用 [`storage-sqlite`](../../code/deepseek-harness/packages/storage/storage-sqlite) 与 `session-query-sqlite` 仍使用 SQLite，但它们不是 Session Event Log 的持久化 Provider。
 
 ## 7. 能力接缝
 
@@ -140,16 +144,16 @@ Consumer           → Agent 可调用 Tool 或其他使用者
 
 ## 8. 四种 Agent Preset
 
-Preset 定义位于 [`apps/cli/config/agent-presets`](../../code/deepseek-harness/apps/cli/config/agent-presets)：
+Preset 定义位于 [`packages/preset/agent-presets/presets`](../../code/deepseek-harness/packages/preset/agent-presets/presets)：
 
 | Preset | 主要用途 | 特征 |
 |---|---|---|
 | `standard` | 完整 Coding Agent | 文件、Shell、Skills、Goal、Plan、Compaction、Sub-Agent、Workflow 等完整能力 |
-| `code` | Code Mode/PTC | 通过 Code Runtime 让模型编写 TypeScript，批量组合多步工具操作 |
+| `ptc` | PTC | 通过 Code Runtime 让模型编写 TypeScript，批量组合多步工具操作；不再暴露重复的通用 `workflow` Tool |
 | `minimal` | 最小评测/编码环境 | 完整固定 Persona，仅保留持久 Bash 与 `str_replace_editor`，无 Compaction |
 | `cordis` | Runtime 自修改 | 增加插件树检查、挂载/卸载和插件开发 Skills |
 
-`minimal` 的实现见 [`minimal/agent.cordis.yml`](../../code/deepseek-harness/apps/cli/config/agent-presets/minimal/agent.cordis.yml)。它不是 `standard` 的简单开关组合，而是独立、严格受限的 Agent Plane 配置。
+`minimal` 的实现见 [`minimal/agent.cordis.yml`](../../code/deepseek-harness/packages/preset/agent-presets/presets/minimal/agent.cordis.yml)。它不是 `standard` 的简单开关组合，而是独立、严格受限的 Agent Plane 配置。
 
 `cordis` Preset 最具实验性：Agent 可以检查自身插件树并动态挂载模型编写的插件。这体现了项目的“自描述运行时”方向，但也扩大了代码执行与配置错误的风险面。
 
@@ -181,7 +185,8 @@ Linux 原生 Landlock 辅助组件位于 [`native/landlock-run`](../../code/deep
 - Patch 替换整段插件配置而非深合并，用户覆盖存在意外丢字段风险。
 - 动态插件和自修改能力强，但插件本质上是同进程代码，不是安全扩展沙箱。
 - Sandbox 后端具有平台差异；需要分别验证 Linux、macOS 和 Windows 的实际执行路径。
-- 仓库对测试、文档和 runtime invariant 要求很高，但这不等于 Developer Preview 已提供稳定兼容承诺。
+- Session 格式仍为预发布 `v0`，未知且未标记 `ignorable` 的事件会拒绝读取；当前没有格式迁移兼容承诺。
+- 仓库要求用 composition test、snapshot 和必要的 runtime invariant 验证关系，但这不等于 Developer Preview 已提供稳定兼容承诺。
 
 ## 12. 推荐阅读顺序
 
@@ -189,9 +194,10 @@ Linux 原生 Landlock 辅助组件位于 [`native/landlock-run`](../../code/deep
 2. [`docs/architecture.md`](../../code/deepseek-harness/docs/architecture.md)：建立 Host/Agent Plane 与事件模型。
 3. [`docs/cordis-primer.md`](../../code/deepseek-harness/docs/cordis-primer.md)：理解 Context、Service、Effect 和 waterfall。
 4. [`bundle/base/cordis.patch.yml`](../../code/deepseek-harness/packages/bundle/base/cordis.patch.yml)：看默认 Host 如何组装。
-5. [`standard/agent.cordis.yml`](../../code/deepseek-harness/apps/cli/config/agent-presets/standard/agent.cordis.yml)：看完整 Agent Plane。
+5. [`standard/agent.cordis.yml`](../../code/deepseek-harness/packages/preset/agent-presets/presets/standard/agent.cordis.yml)：看完整 Agent Plane。
 6. [`core/agent-loop/src/agent.ts`](../../code/deepseek-harness/packages/core/agent-loop/src/agent.ts)：掌握 Turn/Step 主循环。
 7. [`core/session/src`](../../code/deepseek-harness/packages/core/session/src)：理解 Event Log 与重建。
 8. [`core/tools/src`](../../code/deepseek-harness/packages/core/tools/src)：理解工具注册、schema 和执行管线。
-9. 按需进入 `fs/`、`shell/`、`sandbox/`、`subagent/` 等能力组，沿 Definition → Provider → Consumer 阅读。
-10. 对照相应 `tests/` 验证取消、恢复、工具顺序、配置热重载和持久化不变量。
+9. [`session-persistence/README.md`](../../code/deepseek-harness/packages/session/session-persistence/README.md)：理解 handle、单写者、flush 与崩溃恢复。
+10. 按需进入 `fs/`、`shell/`、`sandbox/`、`subagent/` 等能力组，沿 Definition → Provider → Consumer 阅读。
+11. 对照相应 `tests/` 验证取消、恢复、工具顺序、配置热重载和持久化不变量。

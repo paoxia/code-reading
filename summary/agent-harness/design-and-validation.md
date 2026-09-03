@@ -145,9 +145,9 @@ DeepSeek Harness 将追加事件作为唯一事实源，模型历史、UI、Tele
 | prompt | next turn | 空闲时开始新 Turn；运行中排队或拒绝 |
 | follow-up | next turn | 当前 Turn 收口后继续 |
 | steer | next step | 当前 Turn 下一次模型请求消费 |
-| inject | context inbox | 只进入上下文，不主动唤醒 |
+| inject | next step | 只进入下一次上下文，不主动唤醒 |
 
-DeepSeek Harness 用四类 inbox 明确表达这些语义；OpenCode 和 pi 同样强调同一 Session 不能并发执行两个普通 prompt。服务端需要维护：
+DeepSeek Harness 用一个 Inbox 的 `next-turn` / `next-step` 目标和“是否唤醒”参数表达这四类输入语义；OpenCode 和 pi 同样强调同一 Session 不能并发执行两个普通 prompt。服务端需要维护：
 
 ```text
 (tenant, workspace, session) → single-flight coordinator
