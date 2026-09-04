@@ -12,6 +12,7 @@
 
 相关专题：
 
+- [pi Agent 架构设计详解](./architecture.md)
 - [基于 pi 构建自有 Coding Agent：架构与实施方案](./build-your-own-coding-agent.md)
 - [大模型 API 差异适配](./model-api-adaptation.md)
 - [Windows、Linux 与 macOS 跨平台适配](./cross-platform-adaptation.md)
