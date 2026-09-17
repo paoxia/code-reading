@@ -6,6 +6,9 @@
 >
 > 2026-08-24 增量复核版本：`main@4af9d21d3b4d`（`@earendil-works/pi-coding-agent 0.84.2`）
 >
+> 2026-09-17 增量复核版本：`main@71dca871bc80`（`@earendil-works/pi-coding-agent 0.85.1`）。
+> 本轮补充当前内置工具集合、默认启用规则和各工具实现边界。
+>
 > 研究重点：`packages/ai`、`packages/agent`、`packages/coding-agent` 和
 > `packages/tui`。`packages/orchestrator` 的包描述明确标注为 experimental，本文只说明
 > 它的边界，不把它当成主运行时。
@@ -390,17 +393,140 @@ Reducer 和恢复协议下沉到通用运行时的原因之一。
 
 ## 10. 工具、扩展与执行环境
 
-### 10.1 Tool Registry 与调用拦截
+### 10.1 先分清“内置工具”和“Slash Command”
 
-Coding Agent 内置 read、bash、edit、write、grep、find、ls 等工具，入口在
-[`core/tools`](../../code/pi/packages/coding-agent/src/core/tools)。SDK 支持 allowlist、denylist
-和 `noTools`，并在创建实际 cwd-bound 工具后再应用过滤。
+这里讨论的是模型通过 Tool Calling 调用的 **Tool**，不是用户在 TUI 中输入的 `/model`、
+`/session` 等 Slash Command。当前 [`ToolName`](../../code/pi/packages/coding-agent/src/core/tools/index.ts)
+一共声明八个内置工具，但“已注册”和“默认暴露给模型”是两件事：
+
+| 分组 | 工具 | 默认启用 | 说明 |
+|---|---|---:|---|
+| Coding tools | `read`、`bash`、`edit`、`write` | 是 | 常规 Coding Agent 会话的默认工具集 |
+| Read-only tools | `grep`、`find`、`ls` | 否 | 需要通过 `--tools`、SDK `tools` 或 `defaultTools` 显式启用 |
+| Windows shell | `powershell` | 否 | 面向 Windows 的可选 Shell Tool，与 `bash` 复用执行框架 |
+
+因此不能再笼统写成“pi 有六个内置命令”。以当前版本为准：**注册表包含八个内置 Tool，默认
+活动集合只有 `read/bash/edit/write` 四个**。`createAgentSession()` 先读取 SDK allowlist、
+`noTools`、设置中的 `defaultTools` 和 denylist，再得到本次 Session 的活动工具名；
+实现见 [`core/sdk.ts`](../../code/pi/packages/coding-agent/src/core/sdk.ts)。例如：
+
+```bash
+# 只读源码分析
+pi --tools read,grep,find,ls
+
+# 显式启用常用的七个跨平台工具
+pi --tools read,bash,edit,write,grep,find,ls
+```
+
+### 10.2 Tool Definition、注册与执行链
+
+每个内置工具首先是一个 `ToolDefinition`，包含：
+
+- `name`、`description` 和 TypeBox 参数 Schema；
+- 注入 System Prompt 的简短说明和使用规则；
+- `execute(toolCallId, params, signal, onUpdate, context)`；
+- 返回给模型的 `content`、供产品层使用的 `details`；
+- TUI renderer，以及可选的参数预处理和执行模式。
+
+[`tool-definition-wrapper.ts`](../../code/pi/packages/coding-agent/src/core/tools/tool-definition-wrapper.ts)
+再把它收窄成通用 `AgentTool`。`AgentSession` 创建 cwd-bound 内置定义，合并 Extension 和 SDK
+自定义工具，应用 allowlist/denylist，并重建与活动工具一致的 System Prompt。自定义工具如果
+使用同名定义，会覆盖注册表中的内置定义；因此 Tool Registry 也是能力替换边界，不只是列表。
+
+一次模型 Tool Call 的完整路径是：
+
+```text
+模型输出 name + arguments
+  → Agent Loop 按 name 查找活动 AgentTool
+  → prepareArguments（可选兼容修正）
+  → TypeBox Schema 校验
+  → beforeToolCall（Extension 可阻断）
+  → tool.execute(signal, onUpdate)
+  → afterToolCall（Extension 可改写结果）
+  → tool_execution_end
+  → ToolResultMessage 写回上下文
+  → 下一次 Provider Turn
+```
+
+默认情况下同一批 Tool Call 并行执行；如果全局要求顺序执行，或其中任一工具声明
+`executionMode: "sequential"`，整批改为串行。实时结束事件按实际完成顺序发布，但最终
+Tool Result 仍按模型原始调用顺序写入历史，相关实现见
+[`agent-loop.ts`](../../code/pi/packages/agent/src/agent-loop.ts)。
+
+### 10.3 八个内置工具如何实现
+
+工具入口集中在 [`core/tools`](../../code/pi/packages/coding-agent/src/core/tools)：
+
+| 工具 | 默认实现 | 关键语义 |
+|---|---|---|
+| `read` | Node `fs.readFile` | 读取文本或图片；文本支持 `offset/limit`，图片可缩放后作为模型附件返回 |
+| `bash` | `child_process.spawn` | 流式合并 stdout/stderr；支持超时、取消和进程树终止；截断时保存完整输出 |
+| `powershell` | 复用 Shell Tool 框架 | 替换为 PowerShell 配置，并预置 UTF-8 输出编码 |
+| `edit` | 读取、匹配、替换、覆盖写回 | 对原文件做唯一、非重叠的定点替换，并返回 diff 和 unified patch |
+| `write` | `mkdir` + `writeFile` | 创建父目录；文件存在时完整覆盖，适合新文件或整体重写 |
+| `grep` | `ripgrep --json` | 按内容搜索，解析结构化匹配事件，支持 glob、大小写、字面量和上下文行 |
+| `find` | `fd --glob` | 按文件路径搜索，遵循 `.gitignore`，将结果统一为相对 POSIX 路径 |
+| `ls` | `fs.readdir` + `fs.stat` | 包含隐藏文件，按名称排序，并给目录追加 `/` |
+
+#### `read`：分页文本与图片附件
+
+[`read.ts`](../../code/pi/packages/coding-agent/src/core/tools/read.ts) 先相对当前 Session cwd
+解析路径并检查可读性。文本按 UTF-8 解码，`offset` 从 1 开始，输出受到统一行数和字节数限制；
+截断结果会明确给出下一次读取应使用的 `offset`。图片则检测 MIME，经过 `processImage()` 后
+作为 `ImageContent` 返回；模型不支持图片时会附加说明。macOS 截图名称、Unicode 分解和弯引号
+等路径差异由 [`path-utils.ts`](../../code/pi/packages/coding-agent/src/core/tools/path-utils.ts) 兼容。
+
+#### `bash` 与 `powershell`：共享 Shell 执行框架
+
+[`bash.ts`](../../code/pi/packages/coding-agent/src/core/tools/bash.ts) 使用 `spawn()` 启动配置的 Shell，
+stdout/stderr 都进入 `OutputAccumulator`，并通过 `onUpdate` 节流发布增量结果。非 Windows 平台
+使用独立进程组；Abort 或超时会终止整个进程树。返回给模型的是尾部受限输出，完整输出在截断时
+写入临时文件。非零退出码作为 Tool Error 返回，但已经产生的输出不会丢失。
+
+[`powershell.ts`](../../code/pi/packages/coding-agent/src/core/tools/powershell.ts) 没有复制这套逻辑，
+只提供 PowerShell 的 Shell 配置、提示符和 UTF-8 前缀，再调用同一个
+`createShellToolDefinition()`。
+
+#### `edit` 与 `write`：同文件写入串行化
+
+[`edit.ts`](../../code/pi/packages/coding-agent/src/core/tools/edit.ts) 接收一个文件路径和多组
+`oldText/newText`。它会分离 BOM、将换行临时归一为 LF，要求每段 `oldText` 唯一且各编辑区域不
+重叠，然后从后向前替换，恢复原换行格式与 BOM，最后生成展示 diff、unified patch 和首个修改行。
+匹配首先尝试精确文本；失败后仅对尾部空格、Unicode 引号、破折号和特殊空格做有限归一化，
+具体算法见 [`edit-diff.ts`](../../code/pi/packages/coding-agent/src/core/tools/edit-diff.ts)。
+
+[`write.ts`](../../code/pi/packages/coding-agent/src/core/tools/write.ts) 的语义更强：递归创建父目录后
+直接写入完整内容，已有文件会被覆盖。两者共同使用
+[`withFileMutationQueue()`](../../code/pi/packages/coding-agent/src/core/tools/file-mutation-queue.ts)，
+以真实路径为键串行化同一文件的修改；不同文件仍可并行，符号链接指向同一文件时也会落入同一队列。
+
+#### `grep`、`find` 与 `ls`：显式只读探索工具
+
+[`grep.ts`](../../code/pi/packages/coding-agent/src/core/tools/grep.ts) 调用 `rg --json`，流式解析
+匹配事件，而不是解析面向人的彩色终端文本。默认限制 100 个匹配；需要上下文时再读取对应文件，
+长行、匹配数量和总字节数分别有上限。
+
+[`find.ts`](../../code/pi/packages/coding-agent/src/core/tools/find.ts) 默认调用 `fd`。路径型 glob 会
+转换成 `--full-path` 所需模式；Windows 分隔符会单独适配；Git 仓库内外使用不同的 ignore 策略，
+最后把结果相对搜索根目录并统一为 `/`。`grep` 和 `find` 都通过 `ensureTool()` 查找或准备外部
+二进制，也都允许注入自定义 operations，将执行代理到 SSH、容器或远端文件系统。
+
+[`ls.ts`](../../code/pi/packages/coding-agent/src/core/tools/ls.ts) 不启动 Shell，直接调用
+`readdir/stat`，包含 dotfiles、忽略大小写排序并给目录追加 `/`。默认最多返回 500 项；`find`
+默认最多 1000 项。三者默认不活动，是因为默认 `bash` 已能完成搜索，但显式只读 Tool 能提供更
+收敛的参数合同和输出格式。
+
+### 10.4 Tool Registry、调用拦截与安全边界
 
 `AgentSession` 把 Extension 的 `tool_call`/`tool_result` 事件安装到 `Agent.beforeToolCall` 和
 `afterToolCall`。它们可以阻断调用、修改结果和规范化图片，但仍是进程内应用门禁，不等于
 OS 沙箱或远端系统权限。
 
-### 10.2 Skill 与 Extension 不是同一种扩展
+内置工具自身也不是工作区沙箱：路径解析接受绝对路径，`bash` 可以执行宿主 Shell 能执行的
+命令。生产宿主需要通过 allowlist、Tool Hook、operations 替换和 OS/容器隔离共同实现路径、
+命令、网络、凭据与审批策略，不能把 System Prompt 或“只读”名称当作强制权限边界。
+
+### 10.5 Skill 与 Extension 不是同一种扩展
 
 当前产品路径中的 Skill 更接近可发现的 Prompt 资源。用户输入 `/skill:name args` 后，
 `AgentSession` 找到对应文件、去掉 frontmatter，将正文包装成带 name/location 的 `<skill>`
@@ -419,7 +545,7 @@ Provider 和 UI 行为。产品层的 `ExtensionRunner` 被接入 context、Prov
 | Skill | 被注入上下文的指令和参考材料 | 影响模型规划，使用当前已开放 Tool | 不是权限边界，正文应视为 Prompt 输入 |
 | Extension | 进程内可信插件代码 | 注册 Tool/命令/Provider，拦截输入、请求、Tool 和 Session 事件 | 与宿主进程同权限，需要可信来源和加载策略 |
 
-### 10.3 ExecutionEnv 是可替换执行边界
+### 10.6 ExecutionEnv 是可替换执行边界
 
 新 Harness 又抽象出
 [`ExecutionEnv`](../../code/pi/packages/agent/src/harness/types.ts)，把文件系统和 Shell 能力放进
