@@ -2,7 +2,7 @@
 
 ## 2026-11-02 复核与当前定位
 
-- 本地源码：`020e0f77080f96a705227096ac943ad0c39184d4`（提交日期 2026-11-02）。
+- 本地源码：`aef7d276a4518ad9cb2805a8ddc634eef6f3e7dc`（提交日期 2026-11-02）。
 - 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
 
 当前主线仍由 Core Thread/Turn、工具路由与 App Server 分层构成。工具 handler 已出现命名迁移，异步用户消息的现行路径是 send_message_to_user_async.rs；Rollout 恢复和产品 JSON-RPC 不能被等同于单一模型消息流。
@@ -133,3 +133,9 @@ Watcher 更新影响后续请求/turn，不应在没有明确同步点时修改�
 4. [`turn_processor.rs`](../../code/codex/codex-rs/app-server/src/request_processors/turn_processor.rs)：turn/steer/interrupt。
 5. [`transport_tests.rs`](../../code/codex/codex-rs/app-server/src/transport_tests.rs) 与 [`main_tests.rs`](../../code/codex/codex-rs/app-server/src/main_tests.rs)：协议顺序与连接行为。
 6. `request_processors/*_tests.rs`：按 API 验证边界。
+
+## 本轮补充：CLI 恢复的账号校验仍为默认关闭功能
+
+当前 [thread_resume_account.rs](../../code/codex/codex-rs/app-server/src/request_processors/thread_resume_account.rs) 在恢复或附着本地 Thread 前，按 creator user/account 标签检查 ChatGPT 身份。但它仅在 cli_resume_account_check 开启、客户端为 codex-tui/codex_exec、存在 rollout 且保存了 creator 标签时生效；API key 等无法比较的认证模式保持原行为。
+
+[FeatureSpec](../../code/codex/codex-rs/features/src/lib.rs) 将它标为 UnderDevelopment、default_enabled=false。因此这是有条件的 CLI 恢复检查，不能概括为所有 App Server 客户端当前默认都拒绝跨账号恢复。对应 [thread_resume_account_tests.rs](../../code/codex/codex-rs/app-server/tests/suite/v2/thread_resume_account_tests.rs) 在本轮仅作为静态证据阅读。

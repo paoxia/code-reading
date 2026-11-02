@@ -31,6 +31,18 @@ deep_gemm API → NPU 参数/布局适配
 
 实现把分形布局、对齐和地址计算封装到较低层，便于上层保留 API 形状。README 中 dense GEMM 的 full C 与单行 bias 还走不同 epilogue 处理，正确性验证要包括这些分支。
 
+## 深入：Scale factor 变换不是普通 transpose
+
+[launch_transform_sf](../../code/deepgemm-ascend/csrc/jit_kernels/transform_sf.hpp) 接受二维或三维输入，检查 gran_mn 是 `[1,128]` 内的二次幂，按输入 stride 识别主序。float 输入需要把两个 scale exponent 打包；已是 packed int16 的输入则沿用其打包单位。
+
+输出分配为 int16，并通过转置形成 MN 方向连续的布局。[test_layout 的 reference/check_layout](../../code/deepgemm-ascend/tests/test_layout.py) 同时检查 dtype、shape、stride 与逐元素内容，因此仅比较数值还原结果不能覆盖全部接口约束。
+
+## 深入：Grouped layout 的附加状态
+
+Grouped 变换要求一个逻辑 batch，并携带同设备、连续的一维 int32 grouped_layout；组数不能为空。测试还检查 group padding 的处理，避免把无效区间的 scale 当作有效块。
+
+这解释了 API 兼容与数据可直接复用的区别：上层可以继续调用同名函数，底层 scale 的打包、主序、padding 和组边界却必须匹配 NPU 实现。迁移时应把量化产物与布局变换一起核对，不能只比较输出 tensor 的二维外形。
+
 ## 限制与注意事项
 
 快照开发验证面向 Ascend 950、CANN 与 torch_npu 的特定组合。API 对齐不代表数值误差、性能、scale 格式或二进制兼容；这里未运行 NPU 测试。

@@ -2,7 +2,7 @@
 
 ## 2026-11-02 复核与当前定位
 
-- 本地源码：`74563362e8eeceaf299eee057b2ff858be09e84f`（提交日期 2026-11-02）。
+- 本地源码：`07a9f9b7b936499ca1d0746ba7f49e832188c66a`（提交日期 2026-11-02）。
 - 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
 
 常驻 Gateway 继续负责渠道准入、路由与 Agent Runtime 选择。Anthropic CLI 的现行 session/transport 实现在 cli.runtime.ts，Google thinking 参数也已拆出 helper；旧版 SDK runtime 路径不再作为当前证据。

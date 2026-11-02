@@ -32,6 +32,20 @@ dispatch 负责把 token 按路由送给专家，combine 使用对应 handle 将
 
 导入时会检查运行时 NCCL 与构建依赖是否一致，然后初始化 JIT。这是部署合同的一部分。新增 buffer 类型不代表每种通信原语都同样成熟，需分别查看实现与测试。
 
+## 深入：EPHandle 既是映射快照，也是后续执行的借用合同
+
+[EPHandle](../../code/deepep/deep_ep/buffers/ep.py) 保存 topk_idx 的引用、源 token/目标 slot 元数据、各专家接收数量及对齐 prefix sums。cached dispatch 复用这些路由事实，combine 用它逆转路由；仅保存 recv_x 不足以重建完整映射。
+
+`topk_idx` 不能在 handle 使用期间修改。实现用 PyTorch version counter 检测普通原地更新，但 `.data`、原始指针及 inference-mode tensor 不具备同等可检测性，所以“没有触发 assert”不等于路由未变。
+
+展开与非展开布局的接收计数含义不同：一个 token 的多个专家位于同一 rank 时，rank 接收计数可以去重；每专家计数又包含对齐 padding。不能把这两种计数相加或直接当作全局真实 token 总数。
+
+## 深入：异步等待还可能触发 epilogue
+
+[EventOverlap.current_stream_wait](../../code/deepep/deep_ep/utils/event.py) 除了让当前 stream 等待，还会执行一次注册的 hook_after_wait。defer_epilogue 路径因此把部分结果生成推迟到 wait，函数最初返回的可能只是 EventOverlap，而不是通常的五元组。
+
+CUDA `previous_event` 与 allocate_on_comm_stream 有关联要求；extra tensors/事件还负责跨 stream 生命周期。`with event_overlap` 在退出上下文时等待，并不是进入上下文就自动串行化全部工作。调用方应先明确数据在哪个 stream 可见，再安排专家计算和 combine。
+
 ## 限制与注意事项
 
 该库不负责预测专家负载、安排模型层或管理服务请求。NCCL、设备拓扑、buffer 容量和调用 rank 的一致性都会影响正确性，不能把 Python API 兼容理解成任意硬件二进制兼容。

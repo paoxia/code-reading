@@ -2,7 +2,7 @@
 
 ## 2026-11-02 复核与当前定位
 
-- 本地源码：`74563362e8eeceaf299eee057b2ff858be09e84f`（提交日期 2026-11-02）。
+- 本地源码：`07a9f9b7b936499ca1d0746ba7f49e832188c66a`（提交日期 2026-11-02）。
 - 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
 
 常驻 Gateway 继续负责渠道准入、路由与 Agent Runtime 选择。Anthropic CLI 的现行 session/transport 实现在 cli.runtime.ts，Google thinking 参数也已拆出 helper；旧版 SDK runtime 路径不再作为当前证据。
@@ -272,3 +272,11 @@ Agent Runtime 的布局与选择规则见 [agent-runtime-architecture.md](../../
 - ACP runtime 与原生 subagent 的生命周期差异。
 - SQLite 会话 schema、迁移和 transcript 修复策略。
 - Provider 凭据刷新、prepared runtime snapshot 与模型 fallback。
+
+## 本轮补充：插件后台能力必须绑定当前所有权
+
+[skill-authoring-runtime](../../code/openclaw/src/plugin-sdk/skill-authoring-runtime.ts) 允许插件管理其 manifest 中 agentSkillsDir 对应的 Agent skills root。根目录和活跃 authority 由宿主调用作用域解析；未声明目录、已卸载/替换的插件会被拒绝，路径约束、frontmatter、大小限制和安全扫描继续由宿主执行。commitSkillChange 执行变更后刷新发现并发出 skill_changed，重叠变更仍需插件自身序列化。
+
+[后台 Session notice](../../code/openclaw/src/plugins/runtime/runtime-session-notice.ts) 同样从 runtime scope 获取 pluginId 和所有权检查，不能由插件参数自报身份。[session-notice.ts](../../code/openclaw/src/sessions/session-notice.ts) 把通知绑定到捕获的 sessionId/lifecycleRevision；会话重置或替换后返回 session-changed，不把旧任务结果投递到新会话。
+
+notice、下一轮 systemEvent 与渠道发送是三层效果；稳定 idempotencyKey 用于重试结算，已完成发送的记录可避免重试时再次发送。这里是源码机制分析，本轮没有调用插件写入、发送通知或运行集成测试。

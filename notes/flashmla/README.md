@@ -30,6 +30,25 @@ get_mla_metadata → 空 FlashMLASchedMeta
 
 当前 decode 路径忽略兼容参数 `block_table` 与 `cache_seqlens`，并要求 sparse、量化 KV 等条件。稀疏索引表达真实 KV 地址关系，不能把旧参数仍在签名中当作它们仍控制执行的证据。
 
+## 深入：metadata 复用与索引有效性不是同一道校验
+
+[flash_mla_with_kvcache](../../code/flashmla/flash_mla/flash_mla_interface.py) 首次记录 batch、query 长度、head 数、页大小、topk 宽度和 batch-invariant 设置。后续复用会对这些配置做 assert，但不会重新比较 `topk_length`、`extra_topk_length` 的内容值。
+
+| 变化 | 当前合同 |
+| --- | --- |
+| batch/head/page/topk 宽度改变 | 同一 metadata 对象复用时触发相应一致性检查 |
+| topk_length 内容改变、形状未变 | 调用者仍应重建 metadata；不能依赖运行时发现 |
+| enable_batch_invariant 改变 | 不允许在同一已初始化 metadata 上切换 |
+| decode 索引无效 | 只能用 `-1` 表示，正数越界没有通用保护 |
+
+尤其要区分 sparse prefill 与 sparse decode：prefill 接口说明允许 `-1` 或超出 s_kv 的索引表示无效；decode 明确只把 `-1` 当作无效值。不能在两者之间未经转换就复用同一 padding 策略。
+
+## 深入：Attention sink 与返回值
+
+`sparse_fwd` 返回 output、max_logits 和 lse，decode 返回 output 和 lse；顺序和数量并不一致。attention sink 缩放输出，但接口说明它不改变返回的 lse。后续归约若把“sink 后输出”和“未受 sink 影响的归一化统计”当成同一含义，会产生误读。
+
+当前量化 KV 的字节布局还包含原始量化值和尾随 scales；这不是只把 dtype 改成 FP8 的普通 Q/K/V tensor。可对照 [量化参考](../../code/flashmla/tests/quant.py) 和 [Attention 参考](../../code/flashmla/tests/ref.py) 理解它们的数学与存储合同。
+
 ## 限制与注意事项
 
 q head dimension、head 数量、KV 的连续有效地址范围和架构均有限制。需要逐项阅读 docstring/assert；本文没有在支持硬件上验证数值或速度。

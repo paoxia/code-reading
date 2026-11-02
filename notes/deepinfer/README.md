@@ -33,6 +33,28 @@ LLM.generate → _add_request → _run_engine
 
 README 明确列出 DSpark、异步调度、结构化输出与 NVIDIA/Ascend 路径，并说明确定性配置存在平台限制。各机制的开关不是能力等价证明，应沿具体 env 与模型实现核对。
 
+## 深入：三种 EngineType 与全组步型一致
+
+[Scheduler._schedule](../../code/deepinfer/csrc/engine/scheduler.hpp) 根据 PROMPT、COMPLETION 和 NORMAL 分派。前两者只执行 prefill 或 decode；NORMAL 则要求 attention DP 组在同一步采用一致步型。
+
+NORMAL 在两类 decode 间隔上尝试 prefill：ALL 点要求所有 rank 都有可做的 prefill，减少大量空跑；ANY 点允许单个 rank 的等待请求触发全组 prefill，避免孤立请求一直等待。这里还检查 GPU cache watermark。
+
+第一次投票通过后，真正准入仍可能因 slot/KV 不足而失败，因此存在第二次“是否确实有人排出 prefill”的投票。全组都没有排出请求时转回 decode；否则反复执行空 prefill、清零 decode_step，可能让队列无法推进。
+
+## 深入：抢占不总是回队重算
+
+```text
+RUNNING → 资源不足
+  ├─ stop_preempted_request / 结构化输出不可重算
+  │    → FINISHED_PREEMPTED → 释放资源
+  └─ 可重算
+       → reset_for_recompute → WAITING → 释放旧资源
+```
+
+COMPLETION 引擎没有 prefill 通道，构造时明确禁止“抢占后重算”的配置；结构化输出请求也有不可重算的专门限制。不能把 nano-vLLM 的简单抢占策略直接套用到这里。
+
+另一个生命周期限制是 SchedulerOutputs 中部分数组借用 scheduler 的 vector 存储：下一次 schedule 会清空复用。Python 必须在此前消费相应 clone/zero 元数据；需要跨步保留时不能只保存借用引用。结合 [DeferredRelease 与 LLMEngine](../../code/deepinfer/deepinfer/engine/llm_engine.py) 阅读，才能区分 scheduler 元数据借用和设备资源延迟释放。
+
 ## 限制与注意事项
 
 上游明确说明本次发布不包含完整服务所需的 KV cache system、完整 VE/Prefill/Decode 分离与副本间负载均衡。这不表示引擎内部没有 BlockManager。不能将离线快照描述成可直接替代线上完整服务。

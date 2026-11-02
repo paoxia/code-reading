@@ -32,6 +32,24 @@ model layer → Python wrapper / platform dispatch
 
 量化要同时关注 tensor 数值、scale 格式和内存布局；例如 per-token 与 per-block 的统计/还原语义不同。配置中的 alignment、核数与 deterministic 开关也会参与执行策略。
 
+## 深入：以 per_block_cast 跟踪包装层到设备分派
+
+[per_block_cast_impl](../../code/tilekernels/tile_kernels/quant/per_block_cast_kernel.py) 校验二维连续输入、维度对齐以及预分配输出，再生成输入/输出格式配置并选择 CUDA 或 Ascend kernel。这里可看到三种不同合同：
+
+| 模式 | 控制参数 | 返回 |
+| --- | --- | --- |
+| 只统计 scale | sf_only=True | scale tensor |
+| 已有 scale 的 cast | sf 非空 | 量化输出 tensor |
+| 同时量化与统计 | 其他情况 | `(out_x, out_sf)` |
+
+这些返回形状由参数决定，不宜在上层一律解包成二元组。提供 sf 时还不能同时请求某些 packed/TMA layout 模式，预分配 out_x 的地址需要满足 16-byte 对齐。
+
+## 深入：共享包装层不意味着同一后端支持矩阵
+
+当前 [CUDA kernel](../../code/tilekernels/tile_kernels/quant/per_block_cast_cuda.py) 支持的 scale block 维度组合，与 [Ascend kernel](../../code/tilekernels/tile_kernels/quant/per_block_cast_asc.py) 中限定的 `(32,32)` 不同；Ascend 还显式限制目标低精度类型。CUDA 的 PDL 设置与 NPU vector/core 的配置也是不同分派参数。
+
+所以“同一个 Python 函数名”和“相同模型数学”不足以证明平台等价。应沿 wrapper 的配置对象追到具体 kernel 的 assert、scale store 与输出 epilogue，再对照数值测试。
+
 ## 限制与注意事项
 
 本项目不是 serving 引擎，也不是所有 PyTorch 算子的通用替换。专用 kernel 的 shape、dtype 与架构前提应逐个阅读；测试目录给出数值合同，尚未在此运行。

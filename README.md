@@ -18,7 +18,7 @@
 
 ## 研究索引
 
-2026-11-02 已为清单中的 **48 个项目** 建立项目笔记，涵盖 Coding Agent、Agent 框架、Agent 平台与助手、AI 基础设施、模型原理和 AI 应用。源码版本以各笔记记录的本地 HEAD 为准；部分仓库仍是浅克隆，历史状态见项目总览。
+2026-11-02 已为清单中的 **48 个项目** 建立项目笔记，涵盖 Coding Agent、Agent 框架、Agent 平台与助手、AI 基础设施、模型原理和 AI 应用。源码版本以各笔记记录的本地 HEAD 为准；48 个本地仓库均已非浅克隆，研究版本与历史状态见项目总览。
 
 - [全部项目总览与阅读路线](summary/project-landscape/overview.md)
 - [AI 基础设施分层与阅读路线](summary/ai-infrastructure/architecture-and-reading-guide.md)

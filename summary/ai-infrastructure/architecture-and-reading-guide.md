@@ -74,6 +74,41 @@ DualPipe 的 [step](../../code/dualpipe/dualpipe/dualpipe.py) 管理训练 micro
 
 3FS 的 [设计说明](../../code/3fs/docs/design_notes.md) 区分元数据事务、chunk 复制与客户端 I/O。它可以作为推理缓存的存储底座；这不等于它负责引擎内部的 KV slot 分配或前缀索引。
 
+## 调度比较：相同 token 预算不代表相同资源准入
+
+| 实现 | 计算预算之外还要满足什么 | 一处关键生命周期 |
+| --- | --- | --- |
+| nano-vLLM | Sequence 数与物理 blocks | prefill 分块计算，但初次分配可覆盖整个当前序列 |
+| mini-SGLang | 请求表、可驱逐 KV、锁定后容量与输出预留 | cache hit 被锁定后要重新判断可用容量 |
+| SGLang | 模式相关准入、running batch 与受保护前缀 | chunk 尚未完成不能直接并入普通 decode |
+| TensorRT-LLM | 请求状态、encoder 完成、KV/传输与实际资源准备 | 批次可被裁剪，inflight 清理依赖登记时保存的 IDs |
+| DeepInfer | slots/KV、水位及 attention DP 全组步型 | ALL/ANY 投票后还要确认实际排出了 prefill，避免空转 |
+
+这些结论分别来自 [nano-vLLM Scheduler](../../code/nano-vllm/nanovllm/engine/scheduler.py)、[mini-SGLang PrefillAdder](../../code/mini-sglang/python/minisgl/scheduler/prefill.py)、[SGLang Scheduler](../../code/sglang/python/sglang/srt/managers/scheduler.py)、[TensorRT-LLM ScheduledRequests](../../code/tensorrt-llm/tensorrt_llm/_torch/pyexecutor/scheduler/scheduler.py) 和 [DeepInfer C++ Scheduler](../../code/deepinfer/csrc/engine/scheduler.hpp)。
+
+比较调度器时至少固定请求长度、输出上限、前缀命中、物理容量、并行拓扑与是否允许重算。只把 max_tokens 或 batch size 设成同一个数字，不能证明准入与抢占条件相同。
+
+## 四种缓存要分别追踪所有权和有效性
+
+| 缓存 | 保存的对象 | 关键有效性条件 | miss 后做什么 |
+| --- | --- | --- | --- |
+| 请求 KV / 前缀 | 模型中间状态 | token/adapter 命名空间、页表、引用与模型配置 | 重算相应输入或等待资源 |
+| HF host 权重缓存 | checkpoint 对应的加载对象/映射 | 权重身份、host 驻留能力与加载合同 | 重新读入并完成加载 |
+| JIT 磁盘缓存 | 编译产物 | 源码/include/编译器/选项/依赖签名及完成标记 | 编译、原子发布，再 load |
+| Agent 上下文/摘要 | 模型可见的会话表达 | 用户目标、约束、工具配对与语义保留 | 重建/检索/重新编译请求 |
+
+[TensorRT-LLM HfWeightLoader](../../code/tensorrt-llm/tensorrt_llm/_torch/models/checkpoints/hf/weight_loader.py) 的 host cache admission、[DeepJIT Runtime/DiskCache](../../notes/deepjit/README.md) 与 [Agent 上下文总结](../context-management/agent-context-management.md) 分别解释不同合同。3FS 可以保存其中某类数据的文件，但文件存在不等于调用方的 key、版本、对象生命周期和同步条件已经满足。
+
+## 接口迁移应核对执行语义
+
+- DeepSelect 的 begin/hint 参数当前被 assert 拒绝；部分值排序和索引 dtype 还受平台限制。
+- FlashMLA sparse decode 只将 -1 当作无效索引，不能照搬 prefill 的正数越界 padding 规则。
+- DeepEP Ascend 忽略 previous_event；延迟 epilogue 还会改变 dispatch 返回对象与结果产生时机。
+- DeepGEMM Ascend 的 scale 包含 int16 exponent packing、MN-major 与 grouped padding 合同，不能直接复用未经转换的 GPU 量化产物。
+- FlashInfer 的 q_len_per_req 等 plan 参数参与图模式的冻结形状，只在 run 时改参数不足以启用对应路径。
+
+以上是静态源码与接口合同核对，不是平台数值等价或性能测试。公开方法签名、张量 shape、运行依赖与实际完成时刻都一致，才有进一步比较的基础。
+
 ## 当前已知限制
 
 - DeepInfer 的本次发布是离线快照；上游列出尚缺完整服务所需的缓存系统、完整分离和副本负载均衡，不能替它补写已完成能力。

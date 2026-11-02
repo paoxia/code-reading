@@ -39,6 +39,29 @@ LLM API 连接输入处理器、SamplingParams、LoRA、后处理与 GenerationE
 
 这是 host 权重加载缓存，不是请求 KV cache。对应 [weight loader 测试](../../code/tensorrt-llm/tests/unittest/_torch/models/checkpoints/hf/test_weight_loader.py) 在本轮只作静态证据，未运行。
 
+## 深入：ScheduledRequests 不是一份无差别请求列表
+
+[ScheduledRequests](../../code/tensorrt-llm/tensorrt_llm/_torch/pyexecutor/scheduler/scheduler.py) 把 encoder、context 中间块、context 最后一块和 generation 分开。只有 context 最后块与 generation 进入相应采样阶段；encoder 请求不进入 decoder forward。
+
+| 分类 | 为什么必须分开 |
+| --- | --- |
+| encoder_requests | 先生成 decoder 需要的 encoder 输出 |
+| context_requests_chunking | 继续构造 KV，还未到本次 prompt 的采样点 |
+| context_requests_last_chunk | 本步完成 prompt，可以产生后续 token |
+| generation_requests | 在已有状态上继续生成 |
+| paused_requests | 保留请求状态，暂停 KV 使用 |
+| recompute_paused_requests | 释放资源，随后从 context 重算 |
+
+`all_requests()` 只合并 context 与 generation，不包含 encoder；调用方不能据名称推断它穷尽了整个批次全部设备工作。
+
+## 深入：准入之后仍可能调整批次
+
+RequestScheduler 先检查状态范围、encoder output ready event 和分离传输状态，再决定请求是否可加入 forward。`release_context_admission()` 为准入后被撤回的首块请求释放相应资源，不是通用无条件动作。
+
+`added_inflight_req_ids` 单独保存“这个批次真正登记过哪些请求”。原因是 ResourceManager.prepare_resources 可能在登记后裁剪超预算的 context chunk，甚至改变 last-chunk 分类。清理时若从修改后的列表重新推导 inflight IDs，会遗漏之前加入的请求。
+
+这个细节说明调度、资源准备与完成清理并非一个原子函数。阅读 [PyExecutor](../../code/tensorrt-llm/tensorrt_llm/_torch/pyexecutor/py_executor.py) 时，应把“计划列表”“实际资源”和“已经登记的执行事实”一起跟踪。
+
 ## 限制与注意事项
 
 `_torch`、`_experimental`、runtime 和 C++ 目录的接口稳定性不同。GPU 架构、编译依赖和模型支持需要逐项检查；本文仅静态分析，没有构建 CUDA 工程。

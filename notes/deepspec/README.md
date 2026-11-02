@@ -33,6 +33,29 @@ prompts → target answers → target cache
 
 上游还列出 DFlash；阅读时应继续追踪配置复用关系，而不要仅按目录名推断支持算法。训练数据的 target、thinking mode 和评估采样配置都会影响可比性。
 
+## 深入：验证的是连续接受前缀
+
+[verify_draft_tokens](../../code/deepspec/deepspec/eval/base_evaluator.py) 要求 proposal 从当前已接受 token 开始，并校验草稿长度、logits 维数和词表大小。目标模型一次验证当前 token 与草稿序列，然后对每个草稿 token 比较目标/草稿概率。
+
+```text
+draft tokens + q(token)
+  → target forward 得到 p(token)
+  → min(1, p/q) 接受判定
+  → cumprod：只保留第一次拒绝之前的连续前缀
+  → 拒绝处 residual sampling / 全接受后的目标采样
+  → 写入有效 token → crop target KV → 更新 draft context
+```
+
+后面的 token 即使单独通过随机接受，也不能越过先前的拒绝进入本轮提交。由此，按位置接受率、整轮接受长度和生成 token 数是不同指标。
+
+## 深入：为什么常见的 accepted+1 也有例外
+
+正常一轮推进已接受草稿再加一个目标 token；若接受前缀里已出现 stop token，generate_decoding_sample 会截到该位置并裁剪 KV，不再把多余 next token 计入有效输出。proposal length、accepted draft length 与 acceptance length 在统计中分别记录。
+
+`assert_no_final_target_layer()` 还禁止把最终 decoder layer 当作普通 hidden-state cache 来源：Transformers 的该位置包含最终归一化输出，而数据准备保存的是原始层输出。训练 cache 与评估隐藏状态必须语义一致，仅 shape 相同不够。
+
+本轮是源码推导，没有运行训练或接受率实验，也不据该公式直接声称生产端到端加速。
+
 ## 限制与注意事项
 
 target cache 可能很大；接受率不能直接推导生产端到端加速比。该源码提供的训练与评估闭环不等于所有 serving 框架已集成相同算法。

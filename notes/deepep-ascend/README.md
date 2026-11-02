@@ -32,6 +32,27 @@ token tensors + expert routes
 
 与 GPU 版本的主要差异位于设备通信、内存注册与同步机制，而不是简单替换 Python import。阅读时应把 EP 的主链和 PP/Bucket/Engram 分开，分别检查实现状态。
 
+## 深入：兼容签名中的四种不同处理
+
+[Ascend EPBuffer.dispatch](../../code/deepep-ascend/deep_ep/buffers/ep.py) 接口与 GPU 版本相近，但参数含义并非逐项等价：
+
+| 参数 | 当前 Ascend 行为 |
+| --- | --- |
+| previous_event | 兼容参数，忽略 |
+| allocate_on_comm_stream | 兼容参数，分配使用当前 stream |
+| num_qps | 只允许 None/0，由后端自动配置 |
+| do_handle_copy | 当前必须 False |
+
+因此迁移 GPU 的 event 依赖代码时，不能因为调用未报错就认定之前的跨 stream 等待仍然成立。需要以 NPU 的当前 stream、返回事件和具体调用链重新确认依赖。
+
+## 深入：延迟 epilogue 会改变返回协议
+
+`defer_epilogue=True` 要求 async_with_compute_stream=True。这时 dispatch 直接返回 EventOverlap，`current_stream_wait()` 才等待 host 接收数量并执行 copy epilogue，得到 recv_x、recv_topk_idx、recv_topk_weights 与 handle。
+
+普通路径返回的五元组与该延迟路径不是相同形状，包装层应按配置分派。cached handle 同样要求保持路由 tensor 和 token 数不变，避免复用旧 slot 映射处理新路由。
+
+这些边界说明平台迁移至少要核对参数处理、返回类型和执行顺序，不能只比较公开类名和 Python 方法签名。
+
 ## 限制与注意事项
 
 README 将部分 PP、CP/DP Bucket、Engram 通信能力标为开发中，并限定已验证的 Ascend/驱动工具栈；不能把导出类全部视为成熟等价能力。上游性能结果还依赖指定 HDK 配置，本文没有复现。

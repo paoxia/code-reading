@@ -2,9 +2,9 @@
 
 ## 研究范围与更新方式
 
-本轮复核日期为 **2026-11-02**，覆盖 projects.json 中全部 **48 个项目、6 个分类**。本地源码均已存在，本轮为 18 个新增基础设施项目补充首次笔记，为已有项目和专题补充当前基线，并修订模块迁移与过时结论。
+本轮复核日期为 **2026-11-02**，覆盖 projects.json 中全部 **48 个项目、6 个分类**。本地源码均已存在，本轮为 18 个新增基础设施项目补充首次笔记，为已有项目和专题补充当前基线，并修订模块迁移与过时结论。随后继续深化 18 个新增项目，补充调度准入、缓存所有权、张量布局、异步事件和提交/完成边界。
 
-版本表在本轮上游更新进程结束后，按最终本地 HEAD 校准，不表示此后仍与远端实时同步。DeepSeek Harness 仍为浅克隆，其余项目的历史状态以表格为准。下表明确保留浅克隆状态；源码研究没有要求先下载全部历史。所有项目均以静态源码、调用链、测试和示例为依据，没有运行上游构建、GPU/NPU 测试或性能基准。
+版本表在本轮上游更新进程结束后，按最终本地 HEAD 校准，不表示此后仍与远端实时同步。本轮继续核对时，48 个仓库均已补全为非浅克隆；表格已同步历史状态。下表明确保留浅克隆状态；源码研究没有要求先下载全部历史。所有项目均以静态源码、调用链、测试和示例为依据，没有运行上游构建、GPU/NPU 测试或性能基准。
 
 已有专题保留早期版本字段以便追溯；本轮更新段与重写章节给出当前入口和已确认的变化，不把历史快照当作新实现。各笔记的细分范围和实验性限制仍然适用。
 
@@ -34,11 +34,11 @@
 | [pi](../../notes/pi/README.md) | 研究统一模型接口、轻量Agent Loop、终端产品会话与实验性pi-durable持久化运行时 | `62752fd4c37a` | 2026-11-02 | 否 |
 | [opencode](../../notes/opencode/README.md) | 研究完整终端Coding Agent的会话、工具、权限和扩展架构 | `67139d6827af` | 2026-11-02 | 否 |
 | [continue](../../notes/continue/README.md) | 研究开源Coding Agent的模型接入、上下文构建、工具执行和IDE集成 | `5522c6f44ca0` | 2026-07-20 | 否 |
-| [codex](../../notes/codex/README.md) | 研究Rust实现的Agent运行时、沙箱、审批、协议和终端界面 | `020e0f77080f` | 2026-11-02 | 否 |
+| [codex](../../notes/codex/README.md) | 研究Rust实现的Agent运行时、沙箱、审批、协议和终端界面 | `aef7d276a451` | 2026-11-02 | 否 |
 | [kimi-code](../../notes/kimi-code/README.md) | 研究终端Coding Agent的会话循环、工具系统、上下文管理、子Agent并行协作、插件机制、TUI和ACP集成 | `fc3b521b8b68` | 2026-11-02 | 否 |
 | [trae-agent](../../notes/trae-agent/README.md) | 研究模块化软件工程Agent架构、多模型适配、工具调用、交互式CLI、执行轨迹记录和Docker隔离运行 | `e839e559ac61` | 2026-02-05 | 否 |
 | [better-harness](../../notes/better-harness/README.md) | 研究Coding Agent工作流的证据采集、五维评估、修复闭环、报告生成和多宿主适配 | `b605532fcf10` | 2026-10-20 | 否 |
-| [deepseek-harness](../../notes/deepseek-harness/README.md) | 研究基于Cordis的插件化Agent Harness、运行模式、工具、会话与扩展机制 | `ce7073d51254` | 2026-10-30 | 是 |
+| [deepseek-harness](../../notes/deepseek-harness/README.md) | 研究基于Cordis的插件化Agent Harness、运行模式、工具、会话与扩展机制 | `ce7073d51254` | 2026-10-30 | 否 |
 | [swe-agent](../../notes/swe-agent/README.md) | 研究benchmark驱动的软件修复Agent、Agent-Computer Interface、轨迹与评测闭环 | `3ea751c087f3` | 2026-07-16 | 否 |
 | [gemini-cli](../../notes/gemini-cli/README.md) | 研究Google终端Coding Agent的循环、工具、策略、沙箱、扩展与模型接入 | `6814e00d6b14` | 2026-10-30 | 否 |
 | [goose](../../notes/goose/README.md) | 研究MCP-first本地Agent的扩展、Recipe、会话、工具调用与多模型适配 | `0909288ed4a2` | 2026-11-02 | 否 |
@@ -65,7 +65,7 @@
 | 项目与笔记 | 当前研究重点 | 本地提交 | 提交日期 | 浅克隆 |
 | --- | --- | --- | --- | --- |
 | [multica](../../notes/multica/README.md) | 研究托管式Agent平台的任务队列、本地Daemon、统一CLI适配、实时状态同步和多Agent协作 | `ed7c001778c0` | 2026-11-02 | 否 |
-| [openclaw](../../notes/openclaw/README.md) | 研究常驻Gateway、渠道路由、Agent Runtime、插件系统、会话持久化和多Agent协作 | `74563362e8ee` | 2026-11-02 | 否 |
+| [openclaw](../../notes/openclaw/README.md) | 研究常驻Gateway、渠道路由、Agent Runtime、插件系统、会话持久化和多Agent协作 | `07a9f9b7b936` | 2026-11-02 | 否 |
 | [hermes-agent](../../notes/hermes-agent/README.md) | 研究多入口Agent内核、工具注册、Provider适配、长期记忆、消息网关和子Agent委托 | `fbf6c6c91d8a` | 2026-11-02 | 否 |
 | [openmanus](../../notes/openmanus/README.md) | 研究通用Agent的循环、工具系统、规划执行、浏览器能力和多Agent协作 | `3309bf4e416f` | 2026-08-16 | 否 |
 | [deer-flow](../../notes/deer-flow/README.md) | 研究长时任务中的主Agent、子Agent、Skills、Memory、Sandbox与消息网关 | `14abd9a28eb0` | 2026-11-02 | 否 |
@@ -81,8 +81,8 @@
 | [vllm](../../notes/vllm/README.md) | 研究V1多进程架构、统一调度器、连续批处理、KV Cache块管理、Prefix Caching、Model Runner、Attention Backend和分布式执行 | `f9db1756e9e6` | 2026-11-02 | 否 |
 | [nano-vllm](../../notes/nano-vllm/README.md) | 研究精简实现中的LLM推理循环、请求调度、KV Cache管理和模型执行 | `bb823b3e0698` | 2026-04-26 | 否 |
 | [mini-sglang](../../notes/mini-sglang/README.md) | 研究紧凑实现中的LLM服务系统的调度、缓存、批处理和执行流程 | `9a91cfafe754` | 2026-05-17 | 否 |
-| [flashinfer](../../notes/flashinfer/README.md) | 研究LLM推理算子库、Attention内核、KV Cache布局、算子调度及与推理框架的集成 | `ecb713c63c17` | 2026-11-02 | 否 |
-| [sglang](../../notes/sglang/README.md) | 研究LLM与多模态模型服务的请求链、调度、前缀缓存、模型执行和分布式推理，并与vLLM比较 | `ad6ca42dea36` | 2026-11-02 | 否 |
+| [flashinfer](../../notes/flashinfer/README.md) | 研究LLM推理算子库、Attention内核、KV Cache布局、算子调度及与推理框架的集成 | `c34707ae98b8` | 2026-11-02 | 否 |
+| [sglang](../../notes/sglang/README.md) | 研究LLM与多模态模型服务的请求链、调度、前缀缓存、模型执行和分布式推理，并与vLLM比较 | `e33cd0c3a104` | 2026-11-02 | 否 |
 | [tensorrt-llm](../../notes/tensorrt-llm/README.md) | 研究NVIDIA GPU上的LLM推理优化、Python与C++运行时、请求调度、量化和多GPU执行 | `4c2238ee524c` | 2026-11-02 | 否 |
 | [deepinfer](../../notes/deepinfer/README.md) | 研究DeepSeek模型的离线推理引擎、分布式执行、调度和推理组件协作 | `553741557a57` | 2026-10-25 | 否 |
 | [deepspec](../../notes/deepspec/README.md) | 研究投机解码的草稿模型训练、验证流程、接受率和端到端评估 | `005e03b81cec` | 2026-07-09 | 否 |

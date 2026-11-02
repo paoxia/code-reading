@@ -31,6 +31,20 @@ kernel source + includes + compile options
 
 懒初始化推迟设备和编译器发现，PyTorch 集成默认衔接 CUDA 或 torch_npu 当前 stream。对上层算子库来说，JIT 的职责是得到可执行内核，不替算子决定 tile 大小、算法正确性或工作负载调度。
 
+## 深入：内存命中、磁盘命中与编译是不同路径
+
+[Runtime.compile](../../code/deepjit/include/deep_jit/runtime/runtime.hpp) 合并默认与覆盖选项后计算 cache key，再进入 memory cache；未命中时查询 disk entry，必要时编译，最后加载 Kernel。`compile_without_load()` 只产生磁盘产物，不保证设备模块已经加载。
+
+cache key 包括 extra_signature、编译器身份、有效编译选项、post-hook 与源码/include 哈希；磁盘目录还用 name/tag 区分。修改外部依赖却没有纳入被追踪 include 或 extra_signature，不能指望仅靠相同函数名自动识别。
+
+## 深入：共享缓存如何避免读到半成品
+
+[DiskCacheEntry](../../code/deepjit/include/deep_jit/cache/disk.hpp) 的 miss 先建立 `<root>/tmp/<uuid>`。编译完成后写 `.committed`、同步目录，再整体 rename 到 `<root>/cache/<tag>.<digest>`；查找只接受带完成标记的目录。正常异常路径通过析构清理未提交临时目录，突然结束进程则不保证析构运行。
+
+多个 rank 可能同时编译同一个 key：发布时后到者处理 rename 竞争并使用已有目标。这个设计避免把半成品当成命中，但不等于在所有进程间只会编译一次。
+
+[MemCache](../../code/deepjit/include/deep_jit/cache/memory.hpp) 本身是 unordered_map 和 shared_ptr 的 get-or-create，没有在该类内实现互斥。磁盘原子发布与同一个 Runtime 对象的线程安全是两个问题，不能用前者证明后者。
+
 ## 限制与注意事项
 
 README 将基于历史的 cache warmup、直接从 Python 传 source 编译列为 WIP，不能写成已发布功能。后端统一不表示 CUDA 源码能够直接在 Ascend 执行。

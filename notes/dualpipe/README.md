@@ -32,6 +32,20 @@ micro-batches → warmup
 
 `step()` 控制 micro-batch 顺序和前后向资源使用，通信封装管理跨 rank 数据传递。因此阅读时先固定 PP rank/stage 数和 micro-batch 数，再绘制一个小配置的执行表。
 
+## 深入：step 的前提不是任意 micro-batch 数
+
+[DualPipe.step](../../code/dualpipe/dualpipe/dualpipe.py) 要求先设置 P2P tensor shapes/dtype，rank 数为偶数；num_chunks 必须为正偶数且至少是 `2×num_ranks`。它把输入分成 half_num_chunks，以两个方向组织执行，不能把该参数不加解释地等同为单向流水线的微批数量。
+
+forward_only 由 `torch.is_grad_enabled()` 决定，不是仅调用 module.eval() 就自动切换。训练时首尾 rank 还需要 criterion，首尾返回的 loss/output 对应从另一端进入的数据方向。
+
+## 深入：通信提交、计算与张量释放
+
+[comm](../../code/dualpipe/dualpipe/comm.py) 先累计 isend/irecv 操作；forward/backward helper 在消费对应输入前执行提交与等待。定制 overlapped_forward_backward 提供的是模型计算交错位置，不意味着可以省略这些通信依赖。
+
+zero-bubble 路径将部分 weight gradient 工作放入 FIFO 的 WeightGradStore，之后由 `_weight_chunk()` 取出执行。`_free_tensors()` 还要求被释放的 stage 输出不是 view tensor，说明输出别名会影响内存生命周期。
+
+因此阅读调度表时应同时标记 forward、activation backward、weight backward、通信等待与释放，而不是只按 F/B 两种方块估算内存和气泡。
+
 ## 限制与注意事项
 
 真实模型需自行实现定制重叠方法，上游示例不能证明任意模型自动获得相同速度。这里讨论训练流水线，不等同于 serving 的 prefill/decode 连续批处理。

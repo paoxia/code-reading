@@ -31,6 +31,26 @@ Python op(A, B, scales, output)
 
 `__init__.py` 仍兼容部分旧接口并尝试加载 A100 legacy Triton kernels，说明新旧硬件路径并存。应从当前导出的函数追到对应 C++ 特化，再阅读测试生成器如何构造合法输入。
 
+## 深入：一次 SM100 GEMM 的真实准备阶段
+
+[sm100_fp8_fp4_gemm_1d1d](../../code/deepgemm/csrc/jit_kernels/impls/sm100_fp8_fp4_gemm_1d1d.hpp) 先构造 GemmDesc，记录 M/N/K、dtype、A/B 主序、累加项、SM 配置与编译维度；再由 get_best_config 选择 tile、pipeline 和 launch 配置。
+
+```text
+输入张量与 scale
+  → GemmDesc → heuristics / GemmConfig
+  → A/B/CD 与 scale 的 TMA descriptors
+  → JIT 特化 + shared memory / grid / block / cluster
+  → kernel 与 epilogue
+```
+
+A/B 的 stride 进入 TMA descriptor，scale 还带各自 K 粒度和布局信息。因此同样的数学矩阵乘法，如果 storage major、分组方式或 scale 粒度不同，会形成不同特化和描述符，不能只按 M/N/K 判定缓存可复用。
+
+## 深入：初始化与退出也有设备资源语义
+
+[lazy-init 与 shutdown 测试](../../code/deepgemm/tests/test_lazy_init.py) 覆盖本地扩展、fork 及 cuBLASLt 资源释放的部分边界。其中 shutdown probe 关注 handle 必须在底层 backend 已退出之前释放，并检查重复 shutdown 和关闭后不能悄悄重建 runtime。
+
+这里的测试需要相应平台、扩展和编译器，本轮未运行。它提示阅读 JIT 算子库时除了编译与 launch，还需确认进程、设备和库析构顺序；Python 对象被回收不等于所有 native 资源天然按正确顺序退出。
+
 ## 限制与注意事项
 
 不是完整模型执行器；GPU 架构和量化形状约束很强。融合算子的存在不代表对任意模型结构可直接替换，性能也不能脱离布局转换和编译成本比较。

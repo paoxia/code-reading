@@ -32,6 +32,26 @@ API → tokenize → BackendMsg → Scheduler
 
 TableManager 管理请求到 token 的映射，CacheManager 管理页生命周期，RadixCache 管理可共享前缀。完成请求时必须同时回收运行队列与缓存引用；源码特别防止重叠流水线对同一请求重复释放。
 
+## 深入：准入要同时满足三类资源
+
+[PrefillAdder](../../code/mini-sglang/python/minisgl/scheduler/prefill.py) 依次检查请求表空位、当前计算预算与可回收 KV 容量。一次 cache hit 并不能直接证明请求可执行：它必须先锁住命中的 handle，再重新检查容量，因为锁定会把一部分“可驱逐缓存”变为不可驱逐。
+
+| 资源 | 代表状态 | 控制的问题 |
+| --- | --- | --- |
+| 请求表 | TableManager.available_size | 还能否容纳请求到 token 的映射 |
+| 本步 token 预算 | token_budget | 当前 prefill chunk 可以计算多长 |
+| 缓存容量与预留 | available_size / reserved_size | 输入增量和预计输出是否放得下 |
+
+估算使用 `extend_len + output_len`，源码将更好的估算策略和 host cache match 标为 TODO，不能写成已完成的分层缓存调度器。
+
+## 深入：为什么匹配时排除输入的最后一个 token
+
+[CacheManager.match_req](../../code/mini-sglang/python/minisgl/scheduler/cache.py) 只匹配 `input_ids[:input_len-1]`，为本次请求留下至少一个待计算 token。ChunkedReq 不允许按普通完成请求追加 host token，也不会进入 decode manager；最后一个 prefill chunk 完成后才进入正常生成。
+
+`cache_req()` 将请求新计算的前缀插入树，释放被其他请求先插入的重复物理页；完成时还释放不能入树的尾部，未完成时则锁住新 handle。它必须同时维护树中的共享部分和请求私有尾部，不能只对整段调用一次 free。
+
+完整性检查要求 `free_pages + cache_pages == num_pages`，并检查页起点对齐。`lazy_free_region()` 把本次释放的页集中回收到 free_slots，用于配合重叠调度，而不是让页在调用 free 后即可被所有异步消费者安全复用。
+
 ## 限制与注意事项
 
 这是学习实现，模型、后端和部署面均小于完整 SGLang。CUDA stream 与 host 结果回传有明确依赖，不能随意删掉同步点来推断性能提升。
