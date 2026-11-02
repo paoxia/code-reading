@@ -1,5 +1,16 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`f9db1756e9e6809b209bb906c950ac577fdef90f`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+Scheduler、KVCacheManager 与 Executor/Runner 仍构成 V1 主链。当前 V2 Runner 在特性和平台支持时默认选用，不再仅限 pooling；与新纳入的 nano-vLLM、SGLang、FlashInfer 等比较时，必须区分请求调度、缓存管理和算子执行。
+
+当前入口：[vllm/v1/core/sched/scheduler.py](../../code/vllm/vllm/v1/core/sched/scheduler.py)、[vllm/config/vllm.py](../../code/vllm/vllm/config/vllm.py)。
+
+本专题继续从 [serving.py](../../code/vllm/vllm/entrypoints/generate/base/serving.py)、[serving.py](../../code/vllm/vllm/entrypoints/openai/chat_completion/serving.py) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 ## 结论
 
 vLLM 不适配外部模型 provider，而是在同一个本地推理 `EngineClient` 之上提供 OpenAI Chat/Completions/Responses 与 Anthropic Messages 等服务端兼容 API。它解决的是“多种客户端协议如何落到统一推理引擎”和“不同开源模型输出如何解析”，不是跨云厂商转发。原始研究版本：`26d725c`；2026-08-19 增量复核至 `eac636a7`，2026-08-24 再复核至 `0ecc2847`。Chat/Responses/Anthropic handler 仍共享同一 `EngineClient`。

@@ -1,5 +1,16 @@
 # Trae Agent 跨平台适配分析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`e839e559ac61bdd0e057c375dd1dee391fee797d`（提交日期 2026-02-05）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+本地 HEAD 与原笔记相同。BaseAgent 管理步骤，Provider client 管理消息历史，ToolExecutor 负责串行或并行工具；完成协议由 TraeAgent 的 task_done 和 patch 检查进一步约束。
+
+当前入口：[trae_agent/agent/base_agent.py](../../code/trae-agent/trae_agent/agent/base_agent.py)、[trae_agent/agent/trae_agent.py](../../code/trae-agent/trae_agent/agent/trae_agent.py)。
+
+本专题继续从 [bash_tool.py](../../code/trae-agent/trae_agent/tools/bash_tool.py)、[test_bash_tool.py](../../code/trae-agent/tests/tools/test_bash_tool.py) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 > 源码版本：`main@e839e55`
 >
 > 研究范围：`BashTool` 的本机持久 Shell 会话。

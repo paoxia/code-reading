@@ -1,5 +1,16 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`020e0f77080f96a705227096ac943ad0c39184d4`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+当前主线仍由 Core Thread/Turn、工具路由与 App Server 分层构成。工具 handler 已出现命名迁移，异步用户消息的现行路径是 send_message_to_user_async.rs；Rollout 恢复和产品 JSON-RPC 不能被等同于单一模型消息流。
+
+当前入口：[codex-rs/core/src/session/session.rs](../../code/codex/codex-rs/core/src/session/session.rs)、[codex-rs/core/src/tools/handlers/send_message_to_user_async.rs](../../code/codex/codex-rs/core/src/tools/handlers/send_message_to_user_async.rs)。
+
+本专题继续从 [lib.rs](../../code/codex/codex-rs/model-provider-info/src/lib.rs)、[provider.rs](../../code/codex/codex-rs/model-provider/src/provider.rs) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 ## 结论
 
 Codex 当前不是“支持任意厂商协议”的通用适配框架，而是将所有普通 provider 收敛到 OpenAI Responses-compatible wire API；provider 差异主要是 base URL、认证、headers、重试和传输能力。Amazon Bedrock 作为显式特例拥有独立的运行时 provider。原始研究版本：`28aacbb`；2026-08-19 增量复核至 `f5a3dc55`，2026-08-24 再复核至 `33975171`。

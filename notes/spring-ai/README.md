@@ -1,5 +1,14 @@
 # Spring AI 源码解析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`4459ae88f4f6d73c72518cdd6dff0334f7d94083`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+ChatClient/Advisor、ChatModel 和 ToolCallingManager 仍是不同层的扩展点。模型返回工具请求后，DefaultToolCallingManager 负责工具执行与结果消息，不能把 Provider streaming 和 Agent 工具循环视作同一个方法。
+
+当前入口：[spring-ai-model/src/main/java/org/springframework/ai/model/tool/DefaultToolCallingManager.java](../../code/spring-ai/spring-ai-model/src/main/java/org/springframework/ai/model/tool/DefaultToolCallingManager.java)、[spring-ai-client-chat/src/main/java/org/springframework/ai/chat/client/DefaultChatClient.java](../../code/spring-ai/spring-ai-client-chat/src/main/java/org/springframework/ai/chat/client/DefaultChatClient.java)。
+
 ## 研究范围
 
 - 上游仓库：<https://github.com/spring-projects/spring-ai>

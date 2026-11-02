@@ -1,5 +1,14 @@
 # SWE-agent：Benchmark 驱动的软件修复 Agent
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`3ea751c087f32b16e039a2233dd6eefecef325d5`（提交日期 2026-07-16）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+本地 HEAD 与旧研究快照一致。DefaultAgent、parser、ToolHandler 与 SWEEnv 构成修复链，SWE-ReX 承担实际环境；history 可加工，trajectory 用于审计与评测，两者不能互相替代。
+
+当前入口：[sweagent/agent/agents.py](../../code/swe-agent/sweagent/agent/agents.py)、[sweagent/environment/swe_env.py](../../code/swe-agent/sweagent/environment/swe_env.py)。
+
 > 源码版本：`SWE-agent/SWE-agent main@3ea751c`（2026-07-16）
 
 ## 研究范围

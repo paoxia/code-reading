@@ -1,42 +1,39 @@
-# 大模型 API 差异适配
+# pi 大模型 API 差异适配
 
-## 结论
+> 本轮复核：2026-11-02；本地源码 `62752fd4c37a72e0f3c1cc83e9ac3b4299f31fe6`（提交日期 2026-11-02）。基于本地源码与测试材料静态分析，未运行上游构建、测试或性能基准。
 
-pi 的 `packages/ai` 是独立的统一 LLM 层：用规范化 `Model`、`Context`、`Message`、`AssistantMessageEventStream` 表示上层语义，再按 wire API 注册具体 stream 实现。它不把 provider 与协议混为一谈：同一 provider 可以有多个 API，同一种 API 也能被多个兼容 provider 复用。原始研究版本：`3a40794`；2026-08-19 增量复核至 `ed867e90`，2026-08-24 再复核至 `4af9d21d`。
+## 当前补充：动态模型目录与缓存维度
 
-本次增量修复主要是用量与鉴权边界：Anthropic fallback 路径的 cost 改为由规范化 usage 计算，不再偷渡到 stream options；GitHub Copilot OAuth 登录增加节流，降低 policy endpoint 限流。期间曾引入的 cache-friendly compaction primitives 已在同一更新区间被 revert，不应记为当前可用 API。
+[model-catalog-protocol.ts](../../code/pi/scripts/model-catalog-protocol.ts) 对没有显式 pi-version 的已发布客户端，从 User-Agent 解析 pi 版本并直接选择目录，不再通过 redirect 补 query。源码说明服务端响应需要正确声明 Vary；显式 pi-version 优先。这影响目录分发与缓存，未改变工具 continuation loop 的职责。
 
-新一轮修复强调 reasoning metadata 往返：OpenAI Chat Completions 的 thinking signature 保留 `reasoning_details`，Bedrock Converse 的 redacted reasoning 可 round-trip，模型配置还可显式覆盖 finish reason compatibility。统一事件因此不能只保留展示文本，还要保留后续请求所需的 provider reasoning facts。
+## 当前模型装配方式
 
-## 统一模型与事件流
-
-公共类型定义已知 API，同时允许扩展字符串；统一内容覆盖 text、thinking、tool call、tool result、usage 和 stop reason。`StreamFunction`/`streamSimple` 把所有实现收敛为相同的异步事件流（[`types.ts`](../../code/pi/packages/ai/src/types.ts)）。`Models` 集合负责 provider/model catalog、凭据解析与按 `model.api` 分派请求，内建 provider 由组合函数注册（[`models.ts`](../../code/pi/packages/ai/src/models.ts)、[`all.ts`](../../code/pi/packages/ai/src/providers/all.ts)）。
-
-## 每种协议独立适配
-
-Anthropic Messages、OpenAI Chat Completions、OpenAI Responses、Codex Responses、Azure Responses、Google Generative AI/Vertex、Bedrock Converse、Mistral Conversations 等各自拥有请求 lowering 和流事件解析文件。例如 Anthropic 适配器单独处理 thinking signature、cache control、工具引用与 temperature 限制（[`anthropic-messages.ts`](../../code/pi/packages/ai/src/api/anthropic-messages.ts)）；OpenAI Chat 适配器通过 `compat` 标志处理兼容端点的 developer role、streaming usage、strict tools 等细微差异（[`openai-completions.ts`](../../code/pi/packages/ai/src/api/openai-completions.ts)）。
-
-模型 catalog 除价格和 context window 外，还携带 reasoning、input 类型、compat 和 thinking level mapping；`streamSimple` 将统一 reasoning 等级钳制/映射到各 API 原生字段。旧的全局 API registry 被保留在兼容入口，支持扩展注册自定义 wire API（[`compat.ts`](../../code/pi/packages/ai/src/compat.ts)）。
-
-## 统一事件的生命周期
+[pi-ai 文档](../../code/pi/packages/ai/README.md) 当前以 provider collection、显式注册和自动认证解析为主，并包含旧 global API 的迁移说明。不能只复述早期全局模型注册表的用法。
 
 ```text
-Model(provider, api, id, compat)
-  + Context(messages, tools)
-  + options
-  → Models 按 api 选择 StreamFunction
-  → provider request lowering
-  → SDK/fetch event stream
-  → start / text|thinking|toolcall delta / usage / done|error
-  → AssistantMessageEventStream.result()
+createModels → setProvider(provider factory)
+  → 按 provider/model 取得模型与能力
+  → 构造 Context + tools + options
+  → stream / complete
+  → 统一 assistant 内容、tool calls、usage 和 stop reason
 ```
 
-上层既可逐事件渲染，也可等待最终 `AssistantMessage`。适配器必须保证 terminal event 唯一，并在工具参数流结束前完成 JSON 聚合。thinking signature、tool call id 和 provider-specific metadata 属于后续历史重放需要的数据，不能只留在 UI event。
+实现入口是 [ai/src](../../code/pi/packages/ai/src)，协议具体实现见 [providers](../../code/pi/packages/ai/src/providers)。统一层还提供成本与 token 记录、上下文持久化和跨模型衔接；各 Provider 的转换仍承担协议差别。
 
-`streamSimple` 负责将统一 thinking level 映射到模型支持范围，并做常见 options 简化；直接调用底层 stream function 则由调用方承担完整协议参数。自定义 API 注册既要提供 stream 实现，也应补 model catalog/compat，否则能力预检、token 价格和输入类型会缺失。
+## 差异如何隔离
 
-## 取舍
+| 差异 | 实现职责 |
+| --- | --- |
+| 身份与鉴权 | provider factory、credential store、OAuth 与 headers |
+| 内容格式 | 文本、图像、thinking 与工具消息转换 |
+| 流响应 | 将协议片段折成统一事件及完整 AssistantMessage |
+| 能力 | catalog/operation capabilities 与 Provider options |
+| 模型交接 | 转换已有历史中的 reasoning、tool call ID 和结果形式 |
 
-- 分离 provider、model 与 wire API，扩展性强，也能精确保存厂商特性。
-- 代价是适配代码量大；新模型若 catalog/compat 不及时，仍可能请求成功但能力映射错误。
-- “统一事件”不抹掉差异，provider metadata、thinking signature 等仍需回放，跨模型切换历史时必须做兼容清理。
+工具参数在流中可以是部分 JSON；最终执行前必须经过完整参数与 schema 检查。Provider 支持某个选项与该模型/端点接受选项也不是同一事实。
+
+## 运行时和持久化边界
+
+轻量 [Agent Loop](../../code/pi/packages/agent/src/agent-loop.ts) 消费模型事件并接续工具；实验性 [Durable provider](../../code/pi/packages/durable/src/harness/provider.ts) 则在任务与存储语义中装配模型访问。模型层的取消与重试不能代替上层的准入、结果结算和副作用控制。
+
+跨协议比较应记录实际 provider、model、options、上下文转换和完成原因。仅把 base URL 指向兼容端点，不能证明 reasoning、缓存或工具流与原生端点一致。

@@ -1,5 +1,16 @@
 # Better Harness 跨平台适配分析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`b605532fcf1014bcb48d3e6940a5bc64e80cddd5`（提交日期 2026-10-20）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+证据、评估与修复闭环之外，当前 Harness Studio 还拥有 run 与 artifact 工作台。RunView 和 workspace-artifacts 已移动到子目录；Host adapter 和 LLM provider 仍是不同层，报告不能代替真实任务验收。
+
+当前入口：[packages/harness-studio/src/app/run/RunView.tsx](../../code/better-harness/packages/harness-studio/src/app/run/RunView.tsx)、[packages/harness-studio/src/server/workspace/workspace-artifacts.ts](../../code/better-harness/packages/harness-studio/src/server/workspace/workspace-artifacts.ts)。
+
+本专题继续从 [runtime.mjs](../../code/better-harness/scripts/plugin-lifecycle/runtime.mjs)、[platform.mjs](../../code/better-harness/scripts/harness-analysis/canvas-preview/platform.mjs) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 > 原始研究版本：`main@89809f2`
 >
 > 2026-08-24 增量复核版本：`main@77db22a565f1`

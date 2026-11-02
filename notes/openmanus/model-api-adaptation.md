@@ -1,5 +1,16 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`3309bf4e416fb1c74b008f3e86494439a31bad53`（提交日期 2026-08-16）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+当前 BaseAgent.run、ReAct/ToolCall 分层仍以单任务循环为主。工具成功、Agent state 与真实任务完成需要分别判断；本项目是通用 Agent 实现样本，不等于带持久化恢复和强制隔离的托管平台。
+
+当前入口：[app/agent/base.py](../../code/openmanus/app/agent/base.py)、[app/agent/toolcall.py](../../code/openmanus/app/agent/toolcall.py)。
+
+本专题继续从 [llm.py](../../code/openmanus/app/llm.py)、[config.py](../../code/openmanus/app/config.py) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 ## 结论
 
 OpenManus 选择较窄的 OpenAI Chat Completions 统一面：默认 provider 与多数兼容服务都通过 `AsyncOpenAI` 加 base URL 接入，Azure 使用 `AsyncAzureOpenAI`，AWS Bedrock 用自研 shim 模拟 `client.chat.completions.create()`。它不是完整的多原生协议框架。研究版本：`52a13f2`。

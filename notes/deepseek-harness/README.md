@@ -1,5 +1,14 @@
 # DeepSeek Harness 源码分析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`ce7073d51254c26cd63b22a60835b8f948deb447`（提交日期 2026-10-30）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+工具批次已从 agent-loop 拆到 core/tools 的 executeToolBatch：并行 dispatch、模型顺序提交、exclusive barrier 和取消排空分离。Preset 改由声明包/Registry 与 bundle patch 组合，原 CLI agent-presets 目录已移除。
+
+当前入口：[packages/core/tools/src/batch.ts](../../code/deepseek-harness/packages/core/tools/src/batch.ts)、[packages/preset/agent-preset/README.md](../../code/deepseek-harness/packages/preset/agent-preset/README.md)。
+
 > 原始研究版本：`main@47f943859bef`
 >
 > 2026-08-19 增量复核版本：`main@99f6f02fecdb`（`dsh 0.1.0-rc.7`）
@@ -14,7 +23,7 @@
 
 DeepSeek Harness（CLI 命令为 `dsh`）不是“给 DeepSeek 模型套一组固定工具”的薄客户端，而是一套以插件组合 Agent Runtime 的 TypeScript monorepo。它 vendoring 了 Cordis 元框架，并把模型、Agent Loop、Session、Prompt、工具、文件系统、Shell、Sandbox、Sub-Agent、Web UI 与持久化都实现成可挂载插件。
 
-官方介绍见 [`README.zh.md`](../../code/deepseek-harness/README.zh.md)，架构总览见 [`docs/architecture.md`](../../code/deepseek-harness/docs/architecture.md)。当前仍标为 Developer Preview，包结构和公开接口应视为快速演进中。
+官方介绍见 [`README.zh.md`](../../code/deepseek-harness/README.zh.md)，架构总览见 [`docs/architecture.md`](../../code/deepseek-harness/docs/architecture.md)。当前包结构和公开接口持续演进，应以所记录的开发快照为准。
 
 增量复核确认插件化主架构未变，但交互和恢复边界有两项可见更新：Ask User 问题卡可收起，实现见
 [`QuestionComposer.tsx`](../../code/deepseek-harness/packages/client/ui-user-questions/src/client/QuestionComposer.tsx)；LLM replay 会把恢复状态与已组装 content 对齐，遇到不可用状态时降级，避免 max-token continuation 重放出错，见
@@ -76,7 +85,7 @@ DeepSeek Harness 特别区分两种生命周期：
 - Host Plane：进程级单例，例如模型路由、持久化、Sandbox policy、Sub-Agent Registry 和 Web Gateway；
 - Agent Plane：某个 Preset/Agent 独有的 Prompt、工具集合、Plan Mode、Compaction 和 Workflow Engine。
 
-Agent Preset 使用 Cordis `isolate` realm 避免不同 Preset 发布同名服务时互相冲突。源码中的说明集中在 [`apps/cli/config/agent-presets/standard/agent.cordis.yml`](../../code/deepseek-harness/apps/cli/config/agent-presets/standard/agent.cordis.yml)。
+Agent Preset 使用 Cordis `isolate` realm 避免不同 Preset 发布同名服务时互相冲突。源码中的说明集中在 [`packages/bundle/web-app/presets/standard.patch.yml`](../../code/deepseek-harness/packages/bundle/web-app/presets/standard.patch.yml)。
 
 这不是形式上的分层：如果把本应在 Host Plane 的 Registry 放进 Agent realm，Web API 或其他 Agent 就无法找到它；如果把 Agent 私有状态放在 Host Plane，多 Preset 会共享错误实例。
 
@@ -104,7 +113,7 @@ turn/start
 turn/end
 ```
 
-工具调用与结果整理可继续看 [`agent-loop/src/tool-calls.ts`](../../code/deepseek-harness/packages/core/agent-loop/src/tool-calls.ts)。Loop 自身刻意保持窄；重复调用提醒、超时、Compaction、Plan Mode 等行为由外围插件监听事件实现，而不是持续往 Loop 中增加条件分支。
+工具调用与结果整理可继续看 [`tools/src/batch.ts`](../../code/deepseek-harness/packages/core/tools/src/batch.ts)。Loop 自身刻意保持窄；重复调用提醒、超时、Compaction、Plan Mode 等行为由外围插件监听事件实现，而不是持续往 Loop 中增加条件分支。
 
 ## 6. Session Event Log 是事实源
 
@@ -138,26 +147,19 @@ Consumer           → Agent 可调用 Tool 或其他使用者
 
 这种拆法的直接收益是：当 FS、Subprocess 和 Shell Provider 一起指向远端 Sandbox 时，上层工具和 Agent Loop 不需要增加 provider-specific 分支。
 
-## 8. 四种 Agent Preset
+## 8. Agent Preset 的声明与版本
 
-Preset 定义位于 [`apps/cli/config/agent-presets`](../../code/deepseek-harness/apps/cli/config/agent-presets)：
+当前 Preset 声明由 [`agent-preset`](../../code/deepseek-harness/packages/preset/agent-preset/README.md) 与 [`agent-preset-registry`](../../code/deepseek-harness/packages/preset/agent-preset-registry/src/index.ts) 管理；Web bundle 的组合 patch 位于 [`presets`](../../code/deepseek-harness/packages/bundle/web-app/presets)。这里可见 standard、ptc、minimal 和 cordis 的组合，不能再引用已移除的 CLI config 目录或把旧 `code` 名称当作当前配置 ID。
 
-| Preset | 主要用途 | 特征 |
-|---|---|---|
-| `standard` | 完整 Coding Agent | 文件、Shell、Skills、Goal、Plan、Compaction、Sub-Agent、Workflow 等完整能力 |
-| `code` | Code Mode/PTC | 通过 Code Runtime 让模型编写 TypeScript，批量组合多步工具操作 |
-| `minimal` | 最小评测/编码环境 | 完整固定 Persona，仅保留持久 Bash 与 `str_replace_editor`，无 Compaction |
-| `cordis` | Runtime 自修改 | 增加插件树检查、挂载/卸载和插件开发 Skills |
+声明包含稳定的 preset id 和子插件列表。Registry 负责选择、revision retention 与释放，定义会预先加载；修改影响随后创建的 Agent，已有 live Agent 保持自己的组合。因此配置文件已改变并不等于运行中的 Agent 立刻切换全部插件。
 
-`minimal` 的实现见 [`minimal/agent.cordis.yml`](../../code/deepseek-harness/apps/cli/config/agent-presets/minimal/agent.cordis.yml)。它不是 `standard` 的简单开关组合，而是独立、严格受限的 Agent Plane 配置。
-
-`cordis` Preset 最具实验性：Agent 可以检查自身插件树并动态挂载模型编写的插件。这体现了项目的“自描述运行时”方向，但也扩大了代码执行与配置错误的风险面。
+Cordis 运行时编辑仍是需要单独理解的能力：动态挂载插件会改变服务与代码执行边界，不应仅作为常规工具开关处理。
 
 ## 9. Sandbox 与安全边界
 
 Sandbox 是进程启动参数包装能力，而不是 Agent Loop 内部特判。当前包含 Linux `bwrap`/Landlock 与 macOS Seatbelt 等后端；本地文件系统、Subprocess、Shell 和 Terminal 再通过这一策略执行。
 
-Linux 原生 Landlock 辅助组件位于 [`native/landlock-run`](../../code/deepseek-harness/native/landlock-run)。平台支持与降级语义需要结合该目录文档和实际配置判断，不能仅看到 `sandbox` 包名就假定所有平台具有等价强制隔离。
+Linux 原生 Landlock 辅助组件位于 [`native/system`](../../code/deepseek-harness/native/system)。平台支持与降级语义需要结合该目录文档和实际配置判断，不能仅看到 `sandbox` 包名就假定所有平台具有等价强制隔离。
 
 系统还区分模型侧工具、人工 approval/interaction 和外部协议入口。ACP 主要面向自动化客户端，Web UI 通过 Host/Client 插件组合，Python SDK 则调用打包的 Harness Runtime；它们最终共享同一插件化内核。
 
@@ -176,7 +178,7 @@ Linux 原生 Landlock 辅助组件位于 [`native/landlock-run`](../../code/deep
 
 ## 11. 限制与注意事项
 
-- 当前为 Developer Preview，包边界、Preset 和插件 API 仍可能快速变化。
+- 包边界、Preset 和插件 API 持续变化，应固定研究与集成使用的提交。
 - 包数量很多，直接从目录名顺读容易迷失；应从默认 Profile 的最终插件树反向追踪。
 - Patch 替换整段插件配置而非深合并，用户覆盖存在意外丢字段风险。
 - 动态插件和自修改能力强，但插件本质上是同进程代码，不是安全扩展沙箱。
@@ -189,7 +191,7 @@ Linux 原生 Landlock 辅助组件位于 [`native/landlock-run`](../../code/deep
 2. [`docs/architecture.md`](../../code/deepseek-harness/docs/architecture.md)：建立 Host/Agent Plane 与事件模型。
 3. [`docs/cordis-primer.md`](../../code/deepseek-harness/docs/cordis-primer.md)：理解 Context、Service、Effect 和 waterfall。
 4. [`bundle/base/cordis.patch.yml`](../../code/deepseek-harness/packages/bundle/base/cordis.patch.yml)：看默认 Host 如何组装。
-5. [`standard/agent.cordis.yml`](../../code/deepseek-harness/apps/cli/config/agent-presets/standard/agent.cordis.yml)：看完整 Agent Plane。
+5. [`presets/standard.patch.yml`](../../code/deepseek-harness/packages/bundle/web-app/presets/standard.patch.yml)：看完整 Agent Plane。
 6. [`core/agent-loop/src/agent.ts`](../../code/deepseek-harness/packages/core/agent-loop/src/agent.ts)：掌握 Turn/Step 主循环。
 7. [`core/session/src`](../../code/deepseek-harness/packages/core/session/src)：理解 Event Log 与重建。
 8. [`core/tools/src`](../../code/deepseek-harness/packages/core/tools/src)：理解工具注册、schema 和执行管线。

@@ -1,5 +1,16 @@
 # Continue 跨平台适配分析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`5522c6f44ca0ac3528b37244818fbfa39b5af470`（提交日期 2026-07-20）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+本地 HEAD 与原 CLI 研究版本一致。CLI 的 chat 流、core 模型与工具抽象及 IDE 边界仍应分开阅读；本轮扩充的是在完整清单中的定位，没有把它描述为新实现的运行时。
+
+当前入口：[extensions/cli/src/commands/chat.ts](../../code/continue/extensions/cli/src/commands/chat.ts)、[core/llm/index.ts](../../code/continue/core/llm/index.ts)。
+
+本专题继续从 [targets.js](../../code/continue/binary/utils/targets.js)、[hookRunner.ts](../../code/continue/extensions/cli/src/hooks/hookRunner.ts) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 > 源码版本：`main@5522c6f44`
 >
 > 研究范围：二进制/原生依赖分发、VS Code 平台判断、CLI Hook 和资源监控。

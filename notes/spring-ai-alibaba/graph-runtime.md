@@ -1,5 +1,16 @@
 # Spring AI Alibaba Graph 运行时源码笔记
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`17e26ff6fe951d605771c1845229ca3edb043634`（提交日期 2026-10-07）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+ReactAgent 仍以 AgentLlmNode 与 AgentToolNode 组装有状态图，CompiledGraph 承担运行。Hook 改变图阶段，Model/Tool Interceptor 包裹具体调用；Skill 的渐进披露和工具授权要分别理解。
+
+当前入口：[spring-ai-alibaba-agent-framework/src/main/java/com/alibaba/cloud/ai/graph/agent/ReactAgent.java](../../code/spring-ai-alibaba/spring-ai-alibaba-agent-framework/src/main/java/com/alibaba/cloud/ai/graph/agent/ReactAgent.java)、[spring-ai-alibaba-graph-core/src/main/java/com/alibaba/cloud/ai/graph/CompiledGraph.java](../../code/spring-ai-alibaba/spring-ai-alibaba-graph-core/src/main/java/com/alibaba/cloud/ai/graph/CompiledGraph.java)。
+
+本专题继续从 [StateGraph.java](../../code/spring-ai-alibaba/spring-ai-alibaba-graph-core/src/main/java/com/alibaba/cloud/ai/graph/StateGraph.java)、[CompileConfig.java](../../code/spring-ai-alibaba/spring-ai-alibaba-graph-core/src/main/java/com/alibaba/cloud/ai/graph/CompileConfig.java) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 > 源码基线：`code/spring-ai-alibaba/main@84ca19a12`  
 > 本文关注 `spring-ai-alibaba-graph-core`：图如何声明、编译、执行、合并状态、保存检查点，以及中断后如何恢复。
 

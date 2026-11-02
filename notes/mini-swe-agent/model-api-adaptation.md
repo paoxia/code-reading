@@ -1,5 +1,16 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`04d809ceab9df28f9adaed044884180159172930`（提交日期 2026-09-03）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+DefaultAgent 保留线性消息与 query/action/observation 主链，当前配置还显式记录 wall time 与连续格式错误预算。格式错误进入可恢复分支，限额和终态进入结束路径；它适合研究最小闭环，不能替代 durable Session。
+
+当前入口：[src/minisweagent/agents/default.py](../../code/mini-swe-agent/src/minisweagent/agents/default.py)、[src/minisweagent/models/litellm_model.py](../../code/mini-swe-agent/src/minisweagent/models/litellm_model.py)。
+
+本专题继续从 [__init__.py](../../code/mini-swe-agent/src/minisweagent/__init__.py)、[__init__.py](../../code/mini-swe-agent/src/minisweagent/models/__init__.py) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 ## 结论
 
 mini-swe-agent 选择把广泛的厂商差异委托给 LiteLLM、OpenRouter、Portkey、Requesty 等聚合层，自身只维持一个很薄的 `Model` Protocol，并重点修补 Coding Agent 真正依赖的工具调用、消息历史、缓存和计费差异。研究版本：`38c01a1`。

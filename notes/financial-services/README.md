@@ -1,5 +1,14 @@
 # Anthropic Financial Services 插件体系与托管 Agent 架构
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`60565064557ca77b12f62aa7877f365d111c129d`（提交日期 2026-10-28）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+本项目由金融领域插件、managed-agent cookbooks 与辅助脚本组成。orchestrate.py 明确为 reference only，handoff 来自文本解析并做目标白名单和 schema 校验，不能描述成已经完整实现的生产工作流引擎。
+
+当前入口：[scripts/orchestrate.py](../../code/financial-services/scripts/orchestrate.py)、[scripts/sync-agent-skills.py](../../code/financial-services/scripts/sync-agent-skills.py)。
+
 ## 1. 研究范围和版本
 
 - 上游仓库：`https://github.com/anthropics/financial-services`

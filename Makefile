@@ -2,15 +2,17 @@ SHELL := /bin/sh
 export PATH := $(HOME)/.local/bin:$(PATH)
 
 PROJECTS_FILE ?= projects.json
-DEPTH ?= 1
+DEPTH ?= 0
 PROJECT ?=
 JQ ?= jq
+GIT ?= git
+UPDATE_GIT ?= $(GIT) -c url.https://github.com/.insteadOf=git@github.com: -c http.version=HTTP/1.1 -c http.lowSpeedLimit=0 -c http.lowSpeedTime=0
 NPM ?= npm
 HOST ?= 127.0.0.1
 PORT ?= 5173
 PREVIEW_PORT ?= 4173
 
-.PHONY: help install dev serve build preview site-check clone clone-one pull status
+.PHONY: help install dev serve build preview site-check update clone clone-one pull status
 
 help:
 	@echo "Code Reading"
@@ -24,9 +26,10 @@ help:
 	@echo "  make site-check                      Build and verify expected pages"
 	@echo ""
 	@echo "Source projects:"
-	@echo "  make clone                           Clone every missing project over SSH (shallow by default)"
-	@echo "  make clone DEPTH=0                   Clone every project with full history"
-	@echo "  make clone-one PROJECT=pi            Clone one project by name"
+	@echo "  make update                          Clone missing projects, unshallow, and fast-forward over HTTPS without download timeouts"
+	@echo "  make clone                           Clone every missing project over SSH with full history"
+	@echo "  make clone DEPTH=1                   Shallow-clone every missing project"
+	@echo "  make clone-one PROJECT=pi            Clone one project by name with full history"
 	@echo "  make pull                            Unshallow and fast-forward every Git project under code/"
 	@echo "  make status                          Show every configured project's local state"
 
@@ -61,6 +64,10 @@ site-check: build
 	@test -f html/summary/coding-agents/cross-platform-adaptation.html
 	@echo "[ok] VitePress site, project, and summary pages were generated"
 
+update:
+	@$(MAKE) clone DEPTH=0 GIT="$(UPDATE_GIT)"
+	@$(MAKE) pull GIT="$(UPDATE_GIT)"
+
 clone:
 	@set -eu; \
 	$(JQ) -r '.projects[] | [.name, (.repo | sub("^https://github[.]com/"; "git@github.com:")), .path] | @tsv' "$(PROJECTS_FILE)" | \
@@ -75,9 +82,9 @@ clone:
 			mkdir -p "$$(dirname "$$path")"; \
 			rm -f "$$path/.gitkeep"; \
 			if [ "$(DEPTH)" = "0" ]; then \
-				git clone -- "$$repo" "$$path"; \
+				$(GIT) clone -- "$$repo" "$$path"; \
 			else \
-				git clone --depth "$(DEPTH)" -- "$$repo" "$$path"; \
+				$(GIT) clone --depth "$(DEPTH)" -- "$$repo" "$$path"; \
 			fi; \
 		fi; \
 	done
@@ -94,36 +101,42 @@ clone-one:
 	else \
 		mkdir -p "$$(dirname "$$path")"; rm -f "$$path/.gitkeep"; \
 		if [ "$(DEPTH)" = "0" ]; then \
-			git clone -- "$$repo" "$$path"; \
+			$(GIT) clone -- "$$repo" "$$path"; \
 		else \
-			git clone --depth "$(DEPTH)" -- "$$repo" "$$path"; \
+			$(GIT) clone --depth "$(DEPTH)" -- "$$repo" "$$path"; \
 		fi; \
 	fi
 
 pull:
 	@set -u; \
-	found=0; failed=0; \
+	found=0; failed=0; failed_projects=''; \
 	for path in code/*; do \
 		[ -d "$$path" ] || continue; \
 		if [ -d "$$path/.git" ] || [ -f "$$path/.git" ]; then \
 			found=1; \
 			echo "[pull]  $$path"; \
-			if [ "$$(git -C "$$path" rev-parse --is-shallow-repository)" = "true" ]; then \
+			if [ "$$( $(GIT) -C "$$path" rev-parse --is-shallow-repository)" = "true" ]; then \
 				echo "[unshallow] $$path"; \
-				if ! git -C "$$path" fetch --unshallow; then \
+				if ! $(GIT) -C "$$path" fetch --unshallow; then \
 					echo "[error] failed to unshallow $$path" >&2; \
 					failed=1; \
+					failed_projects="$${failed_projects}$${failed_projects:+; }$$path (fetch --unshallow)"; \
 					continue; \
 				fi; \
 			fi; \
-			if ! git -C "$$path" pull --ff-only; then \
+			if ! $(GIT) -C "$$path" pull --ff-only; then \
 				echo "[error] failed to update $$path" >&2; \
 				failed=1; \
+				failed_projects="$${failed_projects}$${failed_projects:+; }$$path (pull --ff-only)"; \
 			fi; \
 		fi; \
 	done; \
 	if [ "$$found" -eq 0 ]; then \
 		echo "[info] no Git projects found under code/"; \
+	elif [ "$$failed" -ne 0 ]; then \
+		printf '[summary] update incomplete: %s\n' "$$failed_projects" >&2; \
+	else \
+		echo "[summary] all local Git projects updated successfully"; \
 	fi; \
 	exit "$$failed"
 

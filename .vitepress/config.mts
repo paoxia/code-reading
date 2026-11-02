@@ -121,6 +121,13 @@ function configureMarkdown(md: any) {
       token.attrs[hrefIndex][1] = `/${projectName}/${anchor ? `#${anchor}` : ''}`
       return defaultLinkOpen(tokens, index, options, env, self)
     }
+    const noteSummary = href.match(/^(?:\.\/)?\.\.\/\.\.\/summary\/([^#]+?)(?:#(.*))?$/)
+    if (noteSummary) {
+      const [, fileName, anchor] = noteSummary
+      const page = fileName === 'README.md' ? '' : fileName.replace(/\.md$/, '')
+      token.attrs[hrefIndex][1] = `/summary/${page}${anchor ? `#${anchor}` : ''}`
+      return defaultLinkOpen(tokens, index, options, env, self)
+    }
     const summaryProjectNote = href.match(/^\.\.\/\.\.\/notes\/([^/]+)\/([^#]+?)(?:#(.*))?$/)
     if (summaryProjectNote && projectByName.has(summaryProjectNote[1])) {
       const [, projectName, fileName, anchor] = summaryProjectNote

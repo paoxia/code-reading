@@ -1,5 +1,16 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`ee3c043bddcc514012885167dd5916b15d6e4731`（提交日期 2026-11-01）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+StateGraph 是声明层，PregelLoop 处理任务推进、channel 更新与 checkpoint。持久化保存的是图执行状态，是否能安全重做外部动作仍由节点的业务幂等合同决定，interrupt 也不等同于普通异常重试。
+
+当前入口：[libs/langgraph/langgraph/graph/state.py](../../code/langgraph/libs/langgraph/langgraph/graph/state.py)、[libs/langgraph/langgraph/pregel/_loop.py](../../code/langgraph/libs/langgraph/langgraph/pregel/_loop.py)。
+
+本专题继续从 [main.py](../../code/langgraph/libs/langgraph/langgraph/pregel/main.py)、[protocol.py](../../code/langgraph/libs/langgraph/langgraph/pregel/protocol.py) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 ## 结论
 
 LangGraph 本身不实现大模型 Provider 适配，而是把模型节点当作 `Runnable` 执行；API 差异通常由 LangChain 的 `BaseChatModel` 及各 provider 集成包解决。LangGraph 负责图调度、状态、checkpoint、interrupt 和流事件，不负责把 OpenAI 请求转换成 Anthropic 请求。研究版本：`30c4d58`。

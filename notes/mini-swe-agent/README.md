@@ -1,5 +1,14 @@
 # mini-swe-agent 架构与 Agent Loop
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`04d809ceab9df28f9adaed044884180159172930`（提交日期 2026-09-03）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+DefaultAgent 保留线性消息与 query/action/observation 主链，当前配置还显式记录 wall time 与连续格式错误预算。格式错误进入可恢复分支，限额和终态进入结束路径；它适合研究最小闭环，不能替代 durable Session。
+
+当前入口：[src/minisweagent/agents/default.py](../../code/mini-swe-agent/src/minisweagent/agents/default.py)、[src/minisweagent/models/litellm_model.py](../../code/mini-swe-agent/src/minisweagent/models/litellm_model.py)。
+
 相关专题：[Windows、Linux 与 macOS 跨平台适配](./cross-platform-adaptation.md)
 
 > 源码版本：`SWE-agent/mini-swe-agent main@38c01a19ed1a`

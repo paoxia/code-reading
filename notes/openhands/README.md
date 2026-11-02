@@ -1,10 +1,25 @@
 # OpenHands Agent Canvas 架构分析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`974ea6ae96945b4c0baffe71a748e491c1316f43`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+当前本地仓库侧重 Agent Canvas/前端平台，流式 UI、provider connections 与后端 Agent Server 合作。不能把外部后端 SDK 的完整执行实现当作该前端仓库已经内置的源码；会话事件与展示批处理需分层解释。
+
+当前入口：[src/utils/streaming-delta-batcher.ts](../../code/openhands/src/utils/streaming-delta-batcher.ts)、[src/api/provider-connections-service/provider-connections-service.api.ts](../../code/openhands/src/api/provider-connections-service/provider-connections-service.api.ts)。
+
 > 原始研究版本：`OpenHands/OpenHands main@e6c90d6`（2026-08-13）
 >
 > 2026-08-19 增量复核版本：`main@551e9a9ee6cc`
 >
 > 2026-08-24 增量复核版本：`main@861e9ef50173`（Agent Canvas `1.15.0`）
+
+## 当前补充：Automation 会话延续与 Sandbox 保留
+
+Automation 的 event trigger 现在可以将 destination 设为 `continue_conversation`，与默认创建新 run 的 `dispatch_run` 分开。前端 [automation-state.ts](../../code/openhands/src/utils/automation-state.ts) 明确把延续会话识别为强制 keep-alive；[automation 类型](../../code/openhands/src/types/automation.ts) 区分未暴露该能力的服务，不能把字段缺省当作所有后端统一支持。
+
+[useUpdateAutomationKeepAlive](../../code/openhands/src/hooks/query/use-automations.ts) 更新服务后使列表与详情查询失效重取。`keep_alive` 的含义是 run 完成后交给 runtime TTL 清理，而不是立刻删除 sandbox；这不表示资源永久保留，也不把服务端执行实现移入前端仓库。
 
 ## 研究范围
 

@@ -1,5 +1,14 @@
 # LangChain 源码解析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`aa13e9c0e94c4e9d203a15a5960b91e29088a98a`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+Agent factory 位于 libs/langchain_v1，使用 StateGraph 组装模型、工具和 middleware；Runnable/ChatModel 位于 core。运行状态和 checkpoint 属于 LangGraph，Provider 字段转换属于模型适配器，二者不应混写成同一抽象。
+
+当前入口：[libs/langchain_v1/langchain/agents/factory.py](../../code/langchain/libs/langchain_v1/langchain/agents/factory.py)、[libs/core/langchain_core/language_models/chat_models.py](../../code/langchain/libs/core/langchain_core/language_models/chat_models.py)。
+
 ## 研究范围
 
 - 上游仓库：<https://github.com/langchain-ai/langchain>

@@ -1,5 +1,16 @@
 # pi 跨平台适配分析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`62752fd4c37a72e0f3c1cc83e9ac3b4299f31fe6`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+当前要区分轻量 Agent Loop、Coding Agent 产品会话和实验性 pi-durable。新 durable 包提供会话与任务持久化，但不代表终端产品所有入口已经迁移；跨平台 Bash 与分发逻辑仍需沿产品包核对。
+
+当前入口：[packages/agent/src/agent-loop.ts](../../code/pi/packages/agent/src/agent-loop.ts)、[packages/durable/README.md](../../code/pi/packages/durable/README.md)。
+
+本专题继续从 [windows.md](../../code/pi/packages/coding-agent/docs/windows.md)、[child-process.ts](../../code/pi/packages/coding-agent/src/utils/child-process.ts) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 > 原始研究版本：`main@97f0ccdd9`
 >
 > 2026-08-24 增量复核版本：`main@4af9d21d3b4d`

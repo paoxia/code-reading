@@ -1,5 +1,14 @@
 # Hermes Agent 源码解析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`fbf6c6c91d8a9ce3008e05c4b51ca60ad05bb85f`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+AIAgent 协调多 Provider、工具执行与上下文，多入口网关和 delegate_tool 扩展到会话及子 Agent。委托的能力与配置裁剪需要沿 child 创建链核对，不能由主 Agent 注册的工具集合推断子 Agent 全部权限。
+
+当前入口：[run_agent.py](../../code/hermes-agent/run_agent.py)、[tools/delegate_tool.py](../../code/hermes-agent/tools/delegate_tool.py)。
+
 ## 研究范围
 
 - 上游仓库：<https://github.com/NousResearch/hermes-agent>

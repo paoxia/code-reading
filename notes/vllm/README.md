@@ -1,5 +1,14 @@
 # vLLM 源码详细解析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`f9db1756e9e6809b209bb906c950ac577fdef90f`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+Scheduler、KVCacheManager 与 Executor/Runner 仍构成 V1 主链。当前 V2 Runner 在特性和平台支持时默认选用，不再仅限 pooling；与新纳入的 nano-vLLM、SGLang、FlashInfer 等比较时，必须区分请求调度、缓存管理和算子执行。
+
+当前入口：[vllm/v1/core/sched/scheduler.py](../../code/vllm/vllm/v1/core/sched/scheduler.py)、[vllm/config/vllm.py](../../code/vllm/vllm/config/vllm.py)。
+
 ## 研究范围
 
 - 上游仓库：<https://github.com/vllm-project/vllm>
@@ -10,7 +19,13 @@
 - 分支状态：`main` 开发快照，源码回退版本标记为 `dev`
 - 研究重点：V1 请求链、多进程架构、统一调度、连续批处理、KV Cache、Prefix Caching、Model Runner、Attention Backend 和分布式执行
 
-本文只把对应提交中已经存在的实现写成确定事实。V0 已被仓库文档标记为完全弃用，因此以下主线统一从 `vllm/v1` 阅读；Model Runner V2 已对 pooling model 默认启用，但这不等于所有 generation workload 都已全量切换。
+本文只把对应提交中已经存在的实现写成确定事实。V0 已被仓库文档标记为完全弃用，因此以下主线统一从 `vllm/v1` 阅读；当前 `VllmConfig.use_v2_model_runner` 在没有显式环境变量覆盖且平台/特性受支持时返回 true；遇到 unsupported features 或缺少所需 Triton 时回退。旧版“仅 pooling 默认启用”的描述已经过时，见 [`config/vllm.py`](../../code/vllm/vllm/config/vllm.py)。
+
+## 最终快照补充：模型加载后的 hook 顺序
+
+当前 [finalize_model_weights](../../code/vllm/vllm/model_executor/model_loader/weight_utils.py) 按子模块先于父模块的顺序执行每个模块自身的 post-load hook，共享子模块只访问一次；量化方法、由其处理的子模块及提前处理的 attention 层走各自的前序路径。layerwise reload 同步使用无 dtype 参数的 hook 签名，见 [layerwise.py](../../code/vllm/vllm/model_executor/model_loader/reload/layerwise.py)。
+
+这一变更发生在模型 load/reload 边界，没有替换 Scheduler/KVCacheManager 主链。MoE top-k kernel 的 PDL launch 属性也改为仅 SM90+ 使用，见 [topk_softmax_kernels.cu](../../code/vllm/csrc/moe/topk_softmax_kernels.cu)，不能把单一架构的 launch 配置推广到全部 GPU。
 
 ## 一句话结论
 
@@ -307,7 +322,7 @@ parent block hash
 
 Runner 预分配大量 CPU/GPU buffer，并维护 persistent batch，目的是减少 Python 分配、动态 shape 处理和 CPU→GPU 同步。异步调度还可以让下一步不等待所有 sampled token 回到 CPU，但这增加了 runner 与 scheduler 状态对齐的复杂度。
 
-[`model_runner_v2.md`](../../code/vllm/docs/design/model_runner_v2.md) 描述的是新的 Model Runner V2 设计；源码中也存在独立实现路径。它仍属于演进中的优化方向，阅读时不要把 V2 文档细节反推成默认 Runner 的全部行为。
+[`model_runner_v2.md`](../../code/vllm/docs/design/model_runner_v2.md) 描述的是新的 Model Runner V2 设计；源码中也存在独立实现路径。当前 V2 的默认选择由 `VllmConfig.use_v2_model_runner` 按平台、环境变量和 unsupported features 决定，不能再笼统把它称为未默认启用的后续方向。
 
 ## 模型加载与扩展
 
