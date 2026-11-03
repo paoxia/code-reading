@@ -1,5 +1,16 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`4a4a83ee5ec86b19d3a2dd9b6471de5128963bec`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+网关的服务边界是鉴权、账号调度、协议转换、上游转发和用量结算，不承担模型推理。排查 failover 必须区分调度成功、上游响应成功和客户端已收到流数据；部署示例同时以 deploy 下的 Compose 和环境模板为依据。
+
+当前入口：[backend/internal/service/openai_gateway_service.go](../../code/sub2api/backend/internal/service/openai_gateway_service.go)、[deploy/docker-compose.local.yml](../../code/sub2api/deploy/docker-compose.local.yml)。
+
+本专题继续从 [gateway.go](../../code/sub2api/backend/internal/server/routes/gateway.go)、[gateway_handler_responses.go](../../code/sub2api/backend/internal/handler/gateway_handler_responses.go) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 ## 结论
 
 sub2api 的核心就是多协议、多上游账号之间的网关适配。它同时暴露 Anthropic Messages、OpenAI Responses/Chat Completions 和 Gemini 原生入口，再依据 API Key 所属分组与候选账号的 platform/type 选择直通、协议转换或专用上游实现。原始研究版本：`5a8d6c4e4`；2026-08-19 增量复核至 `ae62854a`，2026-08-24 再复核至 `03e8ab41`。

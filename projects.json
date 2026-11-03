@@ -18,7 +18,7 @@
     {
       "id": "ai-infrastructure",
       "label": "AI 基础设施",
-      "description": "模型推理、服务化、协议转换与 API 网关"
+      "description": "模型训练与推理、算子与通信、分布式存储、服务化与 API 网关"
     },
     {
       "id": "foundations",
@@ -75,7 +75,7 @@
       "description": "A self-extensible coding agent and agent harness",
       "status": "active",
       "path": "code/pi",
-      "notes": "研究模块化Agent Runtime、统一LLM接口、工具调用和终端交互"
+      "notes": "研究统一模型接口、轻量Agent Loop、终端产品会话与实验性pi-durable持久化运行时"
     },
     {
       "name": "opencode",
@@ -186,6 +186,51 @@
       "notes": "研究V1多进程架构、统一调度器、连续批处理、KV Cache块管理、Prefix Caching、Model Runner、Attention Backend和分布式执行"
     },
     {
+      "name": "nano-vllm",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/GeeeekExplorer/nano-vllm",
+      "description": "A lightweight vLLM implementation built from scratch",
+      "status": "active",
+      "path": "code/nano-vllm",
+      "notes": "研究精简实现中的LLM推理循环、请求调度、KV Cache管理和模型执行"
+    },
+    {
+      "name": "mini-sglang",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/sgl-project/mini-sglang",
+      "description": "A compact implementation of SGLang for learning modern LLM serving systems",
+      "status": "active",
+      "path": "code/mini-sglang",
+      "notes": "研究紧凑实现中的LLM服务系统的调度、缓存、批处理和执行流程"
+    },
+    {
+      "name": "flashinfer",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/flashinfer-ai/flashinfer",
+      "description": "A kernel library for LLM serving",
+      "status": "active",
+      "path": "code/flashinfer",
+      "notes": "研究LLM推理算子库、Attention内核、KV Cache布局、算子调度及与推理框架的集成"
+    },
+    {
+      "name": "sglang",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/sgl-project/sglang",
+      "description": "A high-performance serving framework for large language models and multimodal models",
+      "status": "active",
+      "path": "code/sglang",
+      "notes": "研究LLM与多模态模型服务的请求链、调度、前缀缓存、模型执行和分布式推理，并与vLLM比较"
+    },
+    {
+      "name": "tensorrt-llm",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/NVIDIA/TensorRT-LLM",
+      "description": "A library for optimized LLM inference on NVIDIA GPUs",
+      "status": "active",
+      "path": "code/tensorrt-llm",
+      "notes": "研究NVIDIA GPU上的LLM推理优化、Python与C++运行时、请求调度、量化和多GPU执行"
+    },
+    {
       "name": "kimi-code",
       "group": "coding-agents",
       "repo": "https://github.com/MoonshotAI/kimi-code",
@@ -291,7 +336,7 @@
       "description": "A CLI proxy that compresses command output for coding agents",
       "status": "active",
       "path": "code/rtk",
-      "notes": "研究面向Coding Agent的命令改写、输出压缩、失败回退、Hook集成和节省统计"
+      "notes": "研究命令改写、输出压缩、失败回退、Hook、独立LLM Proxy与两类用量统计"
     },
     {
       "name": "caveman",
@@ -301,6 +346,123 @@
       "status": "active",
       "path": "code/caveman",
       "notes": "研究Coding Agent响应压缩、上下文Engine、本地Proxy、CCR恢复、MCP工具与诚实计量"
+    },
+    {
+      "name": "deepinfer",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/DeepInfer",
+      "description": "A high-performance, large-scale inference framework for DeepSeek models",
+      "status": "active",
+      "path": "code/deepinfer",
+      "notes": "研究DeepSeek模型的离线推理引擎、分布式执行、调度和推理组件协作"
+    },
+    {
+      "name": "deepspec",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/DeepSpec",
+      "description": "A codebase for training and evaluating speculative decoding algorithms",
+      "status": "active",
+      "path": "code/deepspec",
+      "notes": "研究投机解码的草稿模型训练、验证流程、接受率和端到端评估"
+    },
+    {
+      "name": "deepgemm",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/DeepGEMM",
+      "description": "A clean and efficient BLAS kernel library on GPU",
+      "status": "active",
+      "path": "code/deepgemm",
+      "notes": "研究GPU矩阵计算、低精度GEMM、分组计算和内核特化"
+    },
+    {
+      "name": "deepep",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/DeepEP",
+      "description": "An efficient expert-parallel communication library",
+      "status": "active",
+      "path": "code/deepep",
+      "notes": "研究MoE专家并行的dispatch/combine、节点内外通信和计算通信重叠"
+    },
+    {
+      "name": "flashmla",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/FlashMLA",
+      "description": "Efficient Multi-head Latent Attention kernels",
+      "status": "active",
+      "path": "code/flashmla",
+      "notes": "研究MLA与稀疏Attention内核、KV Cache布局、调度元数据和GPU执行"
+    },
+    {
+      "name": "deepjit",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/DeepJIT",
+      "description": "A lightweight library for xPU kernel JIT compilation",
+      "status": "active",
+      "path": "code/deepjit",
+      "notes": "研究xPU内核即时编译、缓存、加载与算子库集成"
+    },
+    {
+      "name": "tilekernels",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/TileKernels",
+      "description": "A kernel library written in TileLang",
+      "status": "active",
+      "path": "code/tilekernels",
+      "notes": "研究TileLang算子实现、内核调优和硬件适配"
+    },
+    {
+      "name": "deepselect",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/DeepSelect",
+      "description": "TopK kernels for DeepSeek Sparse Attention and samplers",
+      "status": "active",
+      "path": "code/deepselect",
+      "notes": "研究稀疏Attention与采样中的TopK选择、GPU实现和数据筛选"
+    },
+    {
+      "name": "3fs",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/3FS",
+      "description": "A high-performance distributed file system for AI workloads",
+      "status": "active",
+      "path": "code/3fs",
+      "notes": "研究AI训练与推理的数据访问、分布式文件系统、元数据和存储服务"
+    },
+    {
+      "name": "dualpipe",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/DualPipe",
+      "description": "Bidirectional pipeline parallelism for computation-communication overlap",
+      "status": "active",
+      "path": "code/dualpipe",
+      "notes": "研究双向流水线并行、训练微批调度和计算通信重叠"
+    },
+    {
+      "name": "eplb",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/EPLB",
+      "description": "Expert Parallelism Load Balancer",
+      "status": "active",
+      "path": "code/eplb",
+      "notes": "研究MoE专家负载统计、专家复制与跨设备部署映射"
+    },
+    {
+      "name": "deepgemm-ascend",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/DeepGEMM-Ascend",
+      "description": "A matrix multiplication kernel library for Huawei Ascend NPUs",
+      "status": "active",
+      "path": "code/deepgemm-ascend",
+      "notes": "研究Ascend矩阵内核、低精度计算及与GPU版DeepGEMM的接口关系"
+    },
+    {
+      "name": "deepep-ascend",
+      "group": "ai-infrastructure",
+      "repo": "https://github.com/deepseek-ai/DeepEP-Ascend",
+      "description": "A communication library for training and inference on Huawei Ascend NPUs",
+      "status": "active",
+      "path": "code/deepep-ascend",
+      "notes": "研究Ascend上的MoE专家并行通信、dispatch/combine及与GPU版DeepEP的接口关系"
     }
   ]
 }

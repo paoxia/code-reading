@@ -1,5 +1,14 @@
 # DeerFlow 2.0 源码分析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`14abd9a28eb035f277aa56098caab1b0600c6e8d`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+长任务平台以 harness、主/子 Agent、sandbox、memory 和服务入口组合。子 Agent registry 和 ACP invocation 是两个可扩展面；工具创建成功、子任务结束和业务交付完成要分别记录，不能由单个 finish 事件推断全部完成。
+
+当前入口：[backend/packages/harness/deerflow/subagents/registry.py](../../code/deer-flow/backend/packages/harness/deerflow/subagents/registry.py)、[backend/packages/harness/deerflow/tools/builtins/invoke_acp_agent_tool.py](../../code/deer-flow/backend/packages/harness/deerflow/tools/builtins/invoke_acp_agent_tool.py)。
+
 > 原始研究版本：`main@c542185a7f71`
 >
 > 2026-08-19 增量复核版本：`main@62ffcff45b95`

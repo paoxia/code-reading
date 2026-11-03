@@ -1,5 +1,14 @@
 # Spring AI Alibaba
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`17e26ff6fe951d605771c1845229ca3edb043634`（提交日期 2026-10-07）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+ReactAgent 仍以 AgentLlmNode 与 AgentToolNode 组装有状态图，CompiledGraph 承担运行。Hook 改变图阶段，Model/Tool Interceptor 包裹具体调用；Skill 的渐进披露和工具授权要分别理解。
+
+当前入口：[spring-ai-alibaba-agent-framework/src/main/java/com/alibaba/cloud/ai/graph/agent/ReactAgent.java](../../code/spring-ai-alibaba/spring-ai-alibaba-agent-framework/src/main/java/com/alibaba/cloud/ai/graph/agent/ReactAgent.java)、[spring-ai-alibaba-graph-core/src/main/java/com/alibaba/cloud/ai/graph/CompiledGraph.java](../../code/spring-ai-alibaba/spring-ai-alibaba-graph-core/src/main/java/com/alibaba/cloud/ai/graph/CompiledGraph.java)。
+
 ## 项目信息
 
 - **GitHub**: https://github.com/alibaba/spring-ai-alibaba

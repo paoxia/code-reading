@@ -1,5 +1,14 @@
 # Gemini CLI 架构与横向对照
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`6814e00d6b148c3a1d57244d5d7040f7c541009d`（提交日期 2026-10-30）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+GeminiClient、GeminiChat 与 Turn 继续分工处理运行循环、模型历史和流事件。ContextManager、压缩和 tool output masking 分开参与请求构造；沙箱、策略和工具调度也不应从一次模型 response 中推断。
+
+当前入口：[packages/core/src/core/client.ts](../../code/gemini-cli/packages/core/src/core/client.ts)、[packages/core/src/core/turn.ts](../../code/gemini-cli/packages/core/src/core/turn.ts)。
+
 > 原始研究版本：`google-gemini/gemini-cli main@c0d1924`（2026-08-13）
 >
 > 2026-08-24 增量复核版本：`main@5411f113cafa`

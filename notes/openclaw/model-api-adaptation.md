@@ -1,8 +1,23 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`07a9f9b7b936499ca1d0746ba7f49e832188c66a`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+常驻 Gateway 继续负责渠道准入、路由与 Agent Runtime 选择。Anthropic CLI 的现行 session/transport 实现在 cli.runtime.ts，Google thinking 参数也已拆出 helper；旧版 SDK runtime 路径不再作为当前证据。
+
+当前入口：[src/agents/embedded-agent-runner/run-entry.ts](../../code/openclaw/src/agents/embedded-agent-runner/run-entry.ts)、[extensions/anthropic/cli.runtime.ts](../../code/openclaw/extensions/anthropic/cli.runtime.ts)。
+
+本专题继续从 [model.ts](../../code/openclaw/src/agents/embedded-agent-runner/model.ts)、[stream.ts](../../code/openclaw/src/llm/stream.ts) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
+## 当前补充：Native 登录身份不等于存储凭据
+
+[session-override.ts](../../code/openclaw/src/agents/auth-profiles/session-override.ts) 现在显式接受由已准入 runtime policy 提供的 nativeAuthProfileIds。解析会话 pin/default 的优先级之后，属于这些 native 身份的选择不会因本地 credential store 缺少对应凭据而被当作失效账号。这里的 native 身份来自运行时策略，不能由普通模型输入自行声明。
+
 ## 结论
 
-OpenClaw 将 provider、model 与 wire API 分开建模，并通过统一 `Model`/`Context`/`AssistantMessageEventStream` 运行多协议模型。内建 AI runtime 处理常见 API，provider 插件再补充发现、鉴权、传输、thinking 与回放策略；协议相近但行为不同的厂商由 stream wrapper 做细粒度修正。原始研究版本：`1bfd207a`；2026-08-19 增量复核至 `3587158a`，2026-08-24 再复核至 `4c48c13a`。Anthropic CLI backend 改用 Agent SDK runtime，xAI 复用 Responses tool transport；这些变化发生在 plugin/runtime 层，provider、model 与 wire API 仍分离。
+OpenClaw 将 provider、model 与 wire API 分开建模，并通过统一 `Model`/`Context`/`AssistantMessageEventStream` 运行多协议模型。内建 AI runtime 处理常见 API，provider 插件再补充发现、鉴权、传输、thinking 与回放策略；协议相近但行为不同的厂商由 stream wrapper 做细粒度修正。原始研究版本：`1bfd207a`；2026-08-19 增量复核至 `3587158a`，2026-08-24 再复核至 `4c48c13a`。当前 Anthropic CLI backend 的 session/transport 管理由 `extensions/anthropic/cli.runtime.ts` 承担，xAI 复用 Responses tool transport；这些变化发生在 plugin/runtime 层，provider、model 与 wire API 仍分离。
 
 ## 模型解析与统一运行时
 
@@ -14,7 +29,7 @@ OpenClaw 将 provider、model 与 wire API 分开建模，并通过统一 `Model
 
 特殊云平台通过 provider 插件拥有完整运行时边界。例如 Amazon Bedrock 插件注册 streaming、model discovery、AWS auth、thinking、guardrail 和 embedding hooks（[`register.sync.runtime.ts`](../../code/openclaw/extensions/amazon-bedrock/register.sync.runtime.ts)）；Anthropic Vertex 插件使用 ADC 合成鉴权，并注册 catalog、Claude replay family 和 thinking profile（[`index.ts`](../../code/openclaw/extensions/anthropic-vertex/index.ts)）。
 
-对于共享 wire API 的厂商，wrapper 只修改必要差异：OpenAI wrapper 处理 reasoning effort、Responses/Chat 选择等行为，Google wrapper 处理 Gemini thinking payload；Anthropic-family 还单独修补 tool payload 与 cache semantics（[`openai.ts`](../../code/openclaw/src/llm/providers/stream-wrappers/openai.ts)、[`google.ts`](../../code/openclaw/src/llm/providers/stream-wrappers/google.ts)、[`anthropic-family-tool-payload-compat.ts`](../../code/openclaw/src/llm/providers/stream-wrappers/anthropic-family-tool-payload-compat.ts)）。
+对于共享 wire API 的厂商，wrapper 只修改必要差异：OpenAI wrapper 处理 reasoning effort、Responses/Chat 选择等行为，Google thinking payload helper 处理 Gemini thinking 参数；Anthropic-family 还单独修补 tool payload 与 cache semantics（[`openai.ts`](../../code/openclaw/src/llm/providers/stream-wrappers/openai.ts)、[`google-thinking-payload.ts`](../../code/openclaw/src/llm/providers/stream-wrappers/google-thinking-payload.ts)、[`anthropic-family-tool-payload-compat.ts`](../../code/openclaw/src/llm/providers/stream-wrappers/anthropic-family-tool-payload-compat.ts)）。
 
 ## 解析、绑定与流式包装顺序
 

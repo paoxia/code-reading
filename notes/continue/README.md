@@ -1,5 +1,14 @@
 # Continue CLI 架构与 Coding Agent 主循环
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`5522c6f44ca0ac3528b37244818fbfa39b5af470`（提交日期 2026-07-20）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+本地 HEAD 与原 CLI 研究版本一致。CLI 的 chat 流、core 模型与工具抽象及 IDE 边界仍应分开阅读；本轮扩充的是在完整清单中的定位，没有把它描述为新实现的运行时。
+
+当前入口：[extensions/cli/src/commands/chat.ts](../../code/continue/extensions/cli/src/commands/chat.ts)、[core/llm/index.ts](../../code/continue/core/llm/index.ts)。
+
 相关专题：[Windows、Linux 与 macOS 跨平台适配](./cross-platform-adaptation.md)
 
 ## 1. 研究范围和版本

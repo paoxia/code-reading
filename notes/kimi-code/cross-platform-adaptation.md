@@ -1,5 +1,16 @@
 # Kimi Code 跨平台适配分析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`fc3b521b8b68468268bb4cfe7f45008ce08b2b99`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+当前 v2 保留统一执行环境、OS backend 和 Shell path bridge。环境探测返回 HostEnvironmentInfo，osKind 使用 macOS/Linux/Windows，Windows Bash 路径需要与原生文件路径互转；不能沿用旧字段形状。
+
+当前入口：[packages/agent-core-v2/src/_base/execEnv/environmentProbe.ts](../../code/kimi-code/packages/agent-core-v2/src/_base/execEnv/environmentProbe.ts)、[packages/agent-core-v2/src/_base/execEnv/shellPathBridge.ts](../../code/kimi-code/packages/agent-core-v2/src/_base/execEnv/shellPathBridge.ts)。
+
+本专题继续从 [environmentProbe.ts](../../code/kimi-code/packages/agent-core-v2/src/_base/execEnv/environmentProbe.ts)、[loginShellPath.ts](../../code/kimi-code/packages/agent-core-v2/src/_base/execEnv/loginShellPath.ts) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 > 原始研究版本：`main@119a33f`
 >
 > 2026-08-19 增量复核版本：`main@2ea2ef62e42b`。本次直接影响的环境探测、login shell、host process 和 `rg` 定位逻辑未改变“Windows 使用 Git Bash、上层依赖 ExecutionEnvironment”的主结论。
@@ -16,11 +27,11 @@ Kimi Code v2 把跨平台事实集中建模为 `ExecutionEnvironment`，再通�
 
 [`environmentProbe.ts`](../../code/kimi-code/packages/agent-core-v2/src/_base/execEnv/environmentProbe.ts) 产出：
 
-- `osKind`：`macos`、`linux`、`windows` 或其他平台值；
-- `arch`；
+- `osKind`：`macOS`、`Linux`、`Windows` 或其他平台值；
+- `osArch` 与 `osVersion`；
 - `pathClass`：`posix` 或 `win32`；
 - `shellName` 与 `shellPath`；
-- 文件系统大小写敏感性和换行符等信息。
+- `homeDir`，以及可选的 `cwd`、`tempDir`。当前返回类型为 `HostEnvironmentInfo`。
 
 上层无需反复直接读取 `process.platform`，也便于测试时注入 platform、env、文件探测和命令执行依赖。
 
@@ -101,7 +112,7 @@ Linux 还需区分对应构建目标；不支持的 OS/arch 会抛出带平台�
 - Git Bash 统一命令语言，但仍要区分其 POSIX 路径与 Windows API 路径。
 - 某些 capability 仅支持特定 OS/arch，核心启动成功不代表全部能力可用。
 - 本专题未发现 Codex 式三平台强制沙箱矩阵。
-- 当前仓库同时存在 v1/v2，本文结论主要针对 v2 边界，不能无条件套到全部旧实现。
+- 当前主要执行源码已位于 agent-core-v2，旧 agent-core 目录已移除；本文结论针对现行 v2 backend，历史迁移数据仍需按相应兼容路径理解。
 
 ## 10. 推荐阅读顺序
 

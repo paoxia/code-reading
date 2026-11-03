@@ -1,5 +1,20 @@
 # OpenClaw 源码解析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`07a9f9b7b936499ca1d0746ba7f49e832188c66a`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+常驻 Gateway 继续负责渠道准入、路由与 Agent Runtime 选择。Anthropic CLI 的现行 session/transport 实现在 cli.runtime.ts，Google thinking 参数也已拆出 helper；旧版 SDK runtime 路径不再作为当前证据。
+
+当前入口：[src/agents/embedded-agent-runner/run-entry.ts](../../code/openclaw/src/agents/embedded-agent-runner/run-entry.ts)、[extensions/anthropic/cli.runtime.ts](../../code/openclaw/extensions/anthropic/cli.runtime.ts)。
+
+## 当前补充：Session 读入、恢复与授权身份
+
+本轮更新后的 [projection recovery](../../code/openclaw/src/agents/embedded-agent-runner/run/attempt-session-projection-recovery.ts) 给 transcript hydration 标记 model-open、cron-model 或 subagent-model 来源，并在 projection rebuilding 时按预算和取消信号等待后重试打开。会话读取、模型执行容量和维护等待是不同阶段。
+
+[session-entry-current-check](../../code/openclaw/src/config/sessions/session-entry-current-check.ts) 通过 retained admission 检查读取来源是否仍有效；[session-prompt-state](../../code/openclaw/src/agents/embedded-agent-runner/session-prompt-state.ts) 对已发布、冻结的工具 schema 保持共享，避免每会话 checkpoint 重复复制。这些属于状态和内存边界，不能理解成可跳过授权复核。
+
 ## 研究范围
 
 - 上游仓库：<https://github.com/openclaw/openclaw>
@@ -18,7 +33,7 @@ OpenClaw 的核心不是一个聊天界面，而是一个**常驻 Gateway 控制
 
 增量复核后这条窄腰仍成立，但权限与状态语义更严格：嵌套 session 工具会保留 caller scope，防止子调用获得比父调用更宽的能力；Skill Workshop proposal 内容变更后必须重新 review；Gateway `activeRunIds` 一旦出现就表示完整的精确集合，客户端不应再把它当成局部增量。
 
-2026-08-24 的变化继续把权限推到边界：Gateway 增加非 maintainer 的 generic operator roles，node command 在 transport handoff 重新校验 policy，node-hosted worker 可选择容器隔离；subagent 的 private commentary 不进入普通日志和完成公告。Anthropic CLI backend 则从手写 Claude session 迁到 Agent SDK runtime。实现见 [`operator-role-policy.ts`](../../code/openclaw/src/gateway/operator-role-policy.ts)、[`node-invoke-plugin-policy.ts`](../../code/openclaw/src/gateway/node-invoke-plugin-policy.ts)、[`node-worker-container-engine.ts`](../../code/openclaw/src/node-host/node-worker-container-engine.ts) 和 [`agent-sdk.runtime.ts`](../../code/openclaw/extensions/anthropic/agent-sdk.runtime.ts)。
+2026-08-24 的变化继续把权限推到边界：Gateway 增加非 maintainer 的 generic operator roles，node command 在 transport handoff 重新校验 policy，node-hosted worker 可选择容器隔离；subagent 的 private commentary 不进入普通日志和完成公告。8 月复核曾记录 Anthropic backend 的 Agent SDK 迁移；当前实现已由 `cli.runtime.ts` 管理 Claude CLI session，应按现行 transport、session 和 task 生命周期阅读。实现见 [`operator-role-policy.ts`](../../code/openclaw/src/gateway/operator-role-policy.ts)、[`node-invoke-plugin-policy.ts`](../../code/openclaw/src/gateway/node-invoke-plugin-policy.ts)、[`node-worker-container-engine.ts`](../../code/openclaw/src/node-host/node-worker-container-engine.ts) 和 [`cli.runtime.ts`](../../code/openclaw/extensions/anthropic/cli.runtime.ts)。
 
 ## 整体架构
 
@@ -257,3 +272,11 @@ Agent Runtime 的布局与选择规则见 [agent-runtime-architecture.md](../../
 - ACP runtime 与原生 subagent 的生命周期差异。
 - SQLite 会话 schema、迁移和 transcript 修复策略。
 - Provider 凭据刷新、prepared runtime snapshot 与模型 fallback。
+
+## 本轮补充：插件后台能力必须绑定当前所有权
+
+[skill-authoring-runtime](../../code/openclaw/src/plugin-sdk/skill-authoring-runtime.ts) 允许插件管理其 manifest 中 agentSkillsDir 对应的 Agent skills root。根目录和活跃 authority 由宿主调用作用域解析；未声明目录、已卸载/替换的插件会被拒绝，路径约束、frontmatter、大小限制和安全扫描继续由宿主执行。commitSkillChange 执行变更后刷新发现并发出 skill_changed，重叠变更仍需插件自身序列化。
+
+[后台 Session notice](../../code/openclaw/src/plugins/runtime/runtime-session-notice.ts) 同样从 runtime scope 获取 pluginId 和所有权检查，不能由插件参数自报身份。[session-notice.ts](../../code/openclaw/src/sessions/session-notice.ts) 把通知绑定到捕获的 sessionId/lifecycleRevision；会话重置或替换后返回 session-changed，不把旧任务结果投递到新会话。
+
+notice、下一轮 systemEvent 与渠道发送是三层效果；稳定 idempotencyKey 用于重试结算，已完成发送的记录可避免重试时再次发送。这里是源码机制分析，本轮没有调用插件写入、发送通知或运行集成测试。

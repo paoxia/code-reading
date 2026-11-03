@@ -1,5 +1,16 @@
 # Codex Tool Runtime：规格规划、路由、审批与沙箱执行
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`aef7d276a4518ad9cb2805a8ddc634eef6f3e7dc`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+当前主线仍由 Core Thread/Turn、工具路由与 App Server 分层构成。工具 handler 已出现命名迁移，异步用户消息的现行路径是 send_message_to_user_async.rs；Rollout 恢复和产品 JSON-RPC 不能被等同于单一模型消息流。
+
+当前入口：[codex-rs/core/src/session/session.rs](../../code/codex/codex-rs/core/src/session/session.rs)、[codex-rs/core/src/tools/handlers/send_message_to_user_async.rs](../../code/codex/codex-rs/core/src/tools/handlers/send_message_to_user_async.rs)。
+
+本专题继续从 [spec_plan.rs](../../code/codex/codex-rs/core/src/tools/spec_plan.rs)、[registry.rs](../../code/codex/codex-rs/core/src/tools/registry.rs) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 > 原始研究版本：`code/codex@28aacbb`
 >
 > 2026-08-19 增量复核版本：`code/codex@f5a3dc55404d`
@@ -30,8 +41,8 @@ TurnContext + model capabilities + features
 
 本轮进一步收紧运行时：unified exec 会执行 granular sandbox approval，Guardian review 与 tool call 同生共灭，executor plugin Stop hook 复用执行上下文；TUI task 管理也通过 dynamic tool 接入，而不是绕过 tool plan 直接改状态。实现见 [`exec_command.rs`](../../code/codex/codex-rs/core/src/tools/handlers/unified_exec/exec_command.rs)、[`dynamic_tools.rs`](../../code/codex/codex-rs/tui/src/dynamic_tools.rs) 与对应审批测试。
 
-新增的 `send_user_message_async` 是这套规划机制的直接例子：它只向 root agent 且支持该工具的模型暴露，调用后立即返回 accepted，将用户可见更新标记为 async delivery，不把该更新回灌到当前模型输入。见
-[`send_user_message_async.rs`](../../code/codex/codex-rs/core/src/tools/handlers/send_user_message_async.rs)。
+新增的 `send_message_to_user_async` 是这套规划机制的直接例子：它只向 root agent 且支持该工具的模型暴露，调用后立即返回 accepted，将用户可见更新标记为 async delivery，不把该更新回灌到当前模型输入。见
+[`send_message_to_user_async.rs`](../../code/codex/codex-rs/core/src/tools/handlers/send_message_to_user_async.rs)。
 
 另一个边界是 environment MCP policy：MCP 工具的可见性和调用不再只受静态配置控制，还必须通过当前执行环境的 policy。因此“已连接 MCP server”不等于“本 turn 中可见且可调用”。
 

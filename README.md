@@ -16,12 +16,24 @@
 └── html/            # 生成后的静态知识站
 ```
 
+## 研究索引
+
+2026-11-02 已为清单中的 **48 个项目** 建立项目笔记，涵盖 Coding Agent、Agent 框架、Agent 平台与助手、AI 基础设施、模型原理和 AI 应用。源码版本以各笔记记录的本地 HEAD 为准；48 个本地仓库均已非浅克隆，研究版本与历史状态见项目总览。
+
+- [全部项目总览与阅读路线](summary/project-landscape/overview.md)
+- [AI 基础设施分层与阅读路线](summary/ai-infrastructure/architecture-and-reading-guide.md)
+- [跨项目主题索引](summary/README.md)
+
 ## 使用方法
 
 1. 在 `projects.json` 中添加要研究的GitHub项目
 2. 将项目克隆到 `code/` 目录
 3. 在 `notes/{project-name}/` 中记录研究笔记
 4. 在 `summary/{topic}/` 中沉淀跨项目比较和总结
+
+执行 `make update` 可一键克隆缺失项目、补全已有浅克隆的历史，并通过 `--ff-only` 更新所有本地项目。此命令通过 HTTPS 拉取，不修改已有远程地址配置，不设置下载超时或低速中断限制；失败后可重新执行，已补全历史的仓库会跳过补全步骤。
+
+执行 `make clone` 可通过 SSH 克隆所有缺失项目，默认获取完整历史；`make clone-one PROJECT=nano-vllm` 可单独克隆一个项目。需要浅克隆时显式指定 `DEPTH=1`。已有仓库会跳过，已有浅克隆可通过 `make pull` 补全历史并更新。
 
 ## 浏览笔记站
 

@@ -1,5 +1,16 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`aef7d276a4518ad9cb2805a8ddc634eef6f3e7dc`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+当前主线仍由 Core Thread/Turn、工具路由与 App Server 分层构成。工具 handler 已出现命名迁移，异步用户消息的现行路径是 send_message_to_user_async.rs；Rollout 恢复和产品 JSON-RPC 不能被等同于单一模型消息流。
+
+当前入口：[codex-rs/core/src/session/session.rs](../../code/codex/codex-rs/core/src/session/session.rs)、[codex-rs/core/src/tools/handlers/send_message_to_user_async.rs](../../code/codex/codex-rs/core/src/tools/handlers/send_message_to_user_async.rs)。
+
+本专题继续从 [lib.rs](../../code/codex/codex-rs/model-provider-info/src/lib.rs)、[provider.rs](../../code/codex/codex-rs/model-provider/src/provider.rs) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 ## 结论
 
 Codex 当前不是“支持任意厂商协议”的通用适配框架，而是将所有普通 provider 收敛到 OpenAI Responses-compatible wire API；provider 差异主要是 base URL、认证、headers、重试和传输能力。Amazon Bedrock 作为显式特例拥有独立的运行时 provider。原始研究版本：`28aacbb`；2026-08-19 增量复核至 `f5a3dc55`，2026-08-24 再复核至 `33975171`。
@@ -89,3 +100,9 @@ WebSocket fallback 是 session 状态，不会每轮重新制造一次失败延�
 - 收敛到单一 wire API 大幅减少协议转换和历史回放歧义。
 - 代价是仅提供 Chat Completions、Anthropic Messages 或 Gemini 原生 API 的服务不能直接接入，必须先经过兼容网关。
 - `supports_websockets`、AWS auth 冲突校验和 provider capabilities 是显式能力边界；它们不靠模型名猜测。
+
+## 本轮补充：模型目录可影响插件措辞，不拥有能力授权
+
+当前模型目录还可携带插件引导文案。解析入口是 [ResolvedModelMessages 插件处理](../../code/codex/codex-rs/prompts/src/model_messages/plugins.rs)：缺失、空白、过长或非法字段逐项回退到 bundled wording，模板还要保留相应能力事实占位符。
+
+[PluginsInstructions world state](../../code/codex/codex-rs/core/src/context/world_state/plugins_instructions.rs) 按实际文案指纹判断是否发出替换或移除片段，处理历史保留与模型切换。目录控制的是有限文案，实际插件身份、可用能力和推荐资格仍由调用方决定，不能把自定义引导解释成增授工具权限。

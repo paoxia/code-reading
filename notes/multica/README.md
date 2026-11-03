@@ -1,5 +1,14 @@
 # Multica 架构与托管 Agent 执行主链
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`ed7c001778c0226e4ac4e5c4133d6a047922e226`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+托管平台把任务生命周期、调度、本地执行端和 Agent CLI adapter 分开；插件 hook 还可进入定时任务路径。平台的任务完成与底层模型的一次 finish 不是同一层事件，模型能力仍取决于所选 adapter/Agent。
+
+当前入口：[server/internal/scheduler/jobs_plugin_hook.go](../../code/multica/server/internal/scheduler/jobs_plugin_hook.go)、[server/pkg/agent/zeroclaw.go](../../code/multica/server/pkg/agent/zeroclaw.go)。
+
 > 原始研究版本：`multica-ai/multica main@ecce589867b9`
 >
 > 2026-08-19 增量复核版本：`main@d563bfbc08d0`（Web `0.4.30`）

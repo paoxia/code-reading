@@ -1,5 +1,14 @@
 # OpenManus 架构与通用 Agent 执行主链
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`3309bf4e416fb1c74b008f3e86494439a31bad53`（提交日期 2026-08-16）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+当前 BaseAgent.run、ReAct/ToolCall 分层仍以单任务循环为主。工具成功、Agent state 与真实任务完成需要分别判断；本项目是通用 Agent 实现样本，不等于带持久化恢复和强制隔离的托管平台。
+
+当前入口：[app/agent/base.py](../../code/openmanus/app/agent/base.py)、[app/agent/toolcall.py](../../code/openmanus/app/agent/toolcall.py)。
+
 ## 1. 研究范围和版本
 
 - 上游仓库：`https://github.com/FoundationAgents/OpenManus`

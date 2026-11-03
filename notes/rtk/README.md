@@ -1,10 +1,27 @@
 # RTK 源码分析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`fcc2eb0939bf96fe49c560dc55064faada000c90`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+RTK 是命令代理和输出压缩层，Hook 初始化已拆为 hooks/init 目录；压缩预览、原始输出回退和使用统计有不同目的。它不运行模型，也不取代 Agent 自身的任务状态与权限控制。
+
+当前入口：[src/hooks/init/mod.rs](../../code/rtk/src/hooks/init/mod.rs)、[src/core/toml_filter.rs](../../code/rtk/src/core/toml_filter.rs)。
+
 > 研究版本：`develop@ba7a9ce0d92a46f2458b82b1fcdd000f887f651a`
 >
 > 提交时间：2026-08-17
 >
 > 研究范围：CLI 路由、命令改写、输出过滤、Hook 集成、失败回退、TOML 过滤器、统计分析与安全边界。
+
+## 当前新增边界：独立 LLM Proxy
+
+命令输出压缩之外，当前还存在 `rtk llm-proxy` 管理的独立 daemon。CLI 生命周期见 [llm_proxy.rs](../../code/rtk/src/llm_proxy.rs)，请求层说明见 [Proxy overview](../../code/rtk/docs/guide/proxy/overview.md)。它处理宿主发往 Provider 的请求，与 CLI 的 Bash 输出过滤可以分别启用，用量也记录在不同数据库中；两者都不承担模型推理或 Agent Loop。
+
+[SessionStart](../../code/rtk/src/hooks/session_start.rs) 会先确认 loopback 上是否真是 RTK Proxy，再检查是否有其他服务占用地址。当前实现同时考虑 localhost 的 IPv4/IPv6；已有监听者却身份不符时，不替换该服务，只有已配置为 RTK 的地址才提示警告。systemMessage 面向用户，不注入模型上下文。
+
+以下命令路由、filter、tee 和 gain 章节主要解释 CLI 路径；不能再用“RTK 只影响终端输入”概括整个当前产品。当前源码注释还区分 CLI、Proxy/Engine 的许可证，应按各目录的声明理解，不把整个 monorepo 的条款混成一个标签。
 
 ## 1. 项目定位与核心结论
 
@@ -30,7 +47,7 @@ RTK（Rust Token Killer）是一个面向 Coding Agent 的命令行代理。它�
 RTK = Command Rewrite + CLI Proxy + Lossy Output Codec + Recovery Path
 ```
 
-README 中“最高减少 90%”指 Bash 输出量，不等于 API 账单减少 90%。模型总成本还包括系统提示、会话历史、工具定义和模型输出；RTK 只影响其中的终端输入部分。
+README 中“最高减少 90%”指 Bash 输出量，不等于 API 账单减少 90%。模型总成本还包括系统提示、会话历史、工具定义和模型输出；这里的 CLI filter 影响终端输入；独立 LLM Proxy 则可处理请求中的其他内容。
 
 ## 2. 总体架构
 
@@ -93,7 +110,7 @@ main()
 4. 各过滤模块返回真实子进程退出码，最终由 `main()` 原样退出。
 5. Clap 无法识别命令时不立即报错，而是进入 TOML 匹配或通用透传路径。
 
-`main.rs` 同时承担大量命令枚举与路由，当前超过 3,600 行，是清晰但高度集中的调度中心。增加新命令通常需要同时修改命令定义、路由分支和 operational-command 白名单。
+`main.rs` 同时承担大量命令枚举与路由，是高度集中的调度中心。增加新命令通常需要同时修改命令定义、路由分支和 operational-command 白名单。
 
 ## 4. Hook 与命令改写链
 
@@ -106,7 +123,7 @@ main()
 - Codex、Cline、Windsurf 主要依靠 `AGENTS.md` 或 rules 文件指导模型主动使用 RTK，属于 prompt-level 集成。
 - GitHub Copilot CLI 若不能直接修改输入，会返回拒绝和替代命令，让 Agent 重试。
 
-安装逻辑集中在 [`src/hooks/init.rs`](../../code/rtk/src/hooks/init.rs)。它负责写入 Hook、备份并修改 Agent 配置、生成说明文件，以及卸载和重复执行时的幂等处理。该文件超过 8,000 行，体现了多宿主协议适配的复杂度。
+安装逻辑集中在 [`src/hooks/init/mod.rs`](../../code/rtk/src/hooks/init/mod.rs)。它负责写入 Hook、备份并修改 Agent 配置、生成说明文件，以及卸载和重复执行时的幂等处理。该文件超过 8,000 行，体现了多宿主协议适配的复杂度。
 
 ### 4.2 Rewrite 调用链
 
@@ -233,7 +250,7 @@ Tier 3: Passthrough(raw)     截断后的原始输出
 7. `max_lines`
 8. `on_empty`
 
-内置 TOML 文件由 [`build.rs`](../../code/rtk/build.rs) 按文件名排序、合并、校验并编译进单个 Rust 二进制。当前研究版本包含 63 个 TOML 文件。
+内置 TOML 文件由 [`build.rs`](../../code/rtk/build.rs) 按文件名排序、合并、校验并编译进单个 Rust 二进制。过滤规则随源码快照演进，不以旧文件数量作为当前覆盖指标。
 
 过滤器查找顺序是项目配置、用户配置、内置规则，首个匹配项生效。外部过滤文件需要经过 [`src/hooks/trust.rs`](../../code/rtk/src/hooks/trust.rs) 的内容哈希信任检查；文件发生变化后，旧信任不会继续生效。这避免克隆仓库后自动执行其中未经确认的输出规则。
 
@@ -370,7 +387,7 @@ RTK 会执行命令、修改 Agent 配置并读取完整终端输出，因此安
 8. 选择一个熟悉的生态模块，例如 [`src/cmds/rust/cargo_cmd.rs`](../../code/rtk/src/cmds/rust/cargo_cmd.rs) 或 [`src/cmds/python/pytest_cmd.rs`](../../code/rtk/src/cmds/python/pytest_cmd.rs)，验证通用骨架如何落地。
 9. [`src/core/toml_filter.rs`](../../code/rtk/src/core/toml_filter.rs)：理解声明式过滤与 fallback。
 10. [`src/core/tracking.rs`](../../code/rtk/src/core/tracking.rs) 和 [`src/core/tee.rs`](../../code/rtk/src/core/tee.rs)：理解统计和可恢复性。
-11. [`hooks/README.md`](../../code/rtk/hooks/README.md) 与 [`src/hooks/init.rs`](../../code/rtk/src/hooks/init.rs)：最后进入多 Agent 集成细节。
+11. [`hooks/README.md`](../../code/rtk/hooks/README.md) 与 [`src/hooks/init/mod.rs`](../../code/rtk/src/hooks/init/mod.rs)：最后进入多 Agent 集成细节。
 
 ## 13. 总体评价
 

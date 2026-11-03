@@ -1,5 +1,14 @@
 # Aider：代码编辑策略、Repository Map 与 Git 工作流
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`5dc9490bb35f9729ef2c95d00a19ccd30c26339c`（提交日期 2026-05-22）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+本地 HEAD 与原笔记一致。核心仍是 Coder 编辑协议、RepoMap 上下文选择和 Git 工作流，不能强行按通用 Function Calling Tool Loop 描述；lint/test 反思和实际编辑应用才构成该项目的反馈闭环。
+
+当前入口：[aider/coders/base_coder.py](../../code/aider/aider/coders/base_coder.py)、[aider/repomap.py](../../code/aider/aider/repomap.py)。
+
 > 源码版本：`Aider-AI/aider main@5dc9490`（2026-05-22）
 
 ## 研究范围

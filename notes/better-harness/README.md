@@ -1,5 +1,14 @@
 # Better Harness 源码分析：用证据闭环审查 Coding Agent 工作流
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`b605532fcf1014bcb48d3e6940a5bc64e80cddd5`（提交日期 2026-10-20）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+证据、评估与修复闭环之外，当前 Harness Studio 还拥有 run 与 artifact 工作台。RunView 和 workspace-artifacts 已移动到子目录；Host adapter 和 LLM provider 仍是不同层，报告不能代替真实任务验收。
+
+当前入口：[packages/harness-studio/src/app/run/RunView.tsx](../../code/better-harness/packages/harness-studio/src/app/run/RunView.tsx)、[packages/harness-studio/src/server/workspace/workspace-artifacts.ts](../../code/better-harness/packages/harness-studio/src/server/workspace/workspace-artifacts.ts)。
+
 相关专题：[Windows、Linux 与 macOS 跨平台适配](./cross-platform-adaptation.md)
 
 > 上游仓库：[`QoderAI/better-harness`](../../code/better-harness/README.md)
@@ -27,8 +36,8 @@
 
 Better Harness 的“证据审查”定位仍未变化，但 Studio 已从查看既有证据扩展为可运行和检查 Agent 的工作台：
 
-- Harness 新增 ACP SDK 执行入口，Studio 可启动 coding agent 并把 ACP 事件翻译成统一 Run 视图，见 [`acp-sdk.ts`](../../code/better-harness/packages/harness/src/exec/acp-sdk.ts) 与 [`RunView.tsx`](../../code/better-harness/packages/harness-studio/src/app/RunView.tsx)；
-- Artifact provider 成为公开扩展面，workspace browser 可按 revision 浏览代码、Markdown、PDF、表格和外部 provider 产物，见 [`provider.ts`](../../code/better-harness/packages/harness/src/artifacts/provider.ts) 与 [`workspace-artifacts.ts`](../../code/better-harness/packages/harness-studio/src/server/workspace-artifacts.ts)；
+- Harness 新增 ACP SDK 执行入口，Studio 可启动 coding agent 并把 ACP 事件翻译成统一 Run 视图，见 [`acp-sdk.ts`](../../code/better-harness/packages/harness/src/exec/acp-sdk.ts) 与 [`RunView.tsx`](../../code/better-harness/packages/harness-studio/src/app/run/RunView.tsx)；
+- Artifact provider 成为公开扩展面，workspace browser 可按 revision 浏览代码、Markdown、PDF、表格和外部 provider 产物，见 [`provider.ts`](../../code/better-harness/packages/harness/src/artifacts/provider.ts) 与 [`workspace-artifacts.ts`](../../code/better-harness/packages/harness-studio/src/server/workspace/workspace-artifacts.ts)；
 - DeepSeek Harness 加入 configured-assets inventory，说明 Agent Customize 仍按宿主 adapter 扩展，而不是把不同宿主配置硬合并成一套 schema。
 
 因此 Studio 现在同时承担 evidence inspection、live run 和 artifact review，但评分与证据契约仍由 Harness 层控制。

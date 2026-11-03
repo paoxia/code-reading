@@ -1,5 +1,16 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`ed7c001778c0226e4ac4e5c4133d6a047922e226`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+托管平台把任务生命周期、调度、本地执行端和 Agent CLI adapter 分开；插件 hook 还可进入定时任务路径。平台的任务完成与底层模型的一次 finish 不是同一层事件，模型能力仍取决于所选 adapter/Agent。
+
+当前入口：[server/internal/scheduler/jobs_plugin_hook.go](../../code/multica/server/internal/scheduler/jobs_plugin_hook.go)、[server/pkg/agent/zeroclaw.go](../../code/multica/server/pkg/agent/zeroclaw.go)。
+
+本专题继续从 [agent.go](../../code/multica/server/pkg/agent/agent.go)、[claude.go](../../code/multica/server/pkg/agent/claude.go) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 ## 结论
 
 Multica 的主 Agent 运行时不直接统一 OpenAI、Anthropic 等模型 wire API，而是统一 Claude Code、Codex、OpenCode、Kimi 等外部 coding-agent CLI/协议。真正的模型鉴权、消息格式和工具调用由各 CLI 负责；Multica 适配的是进程启动、会话恢复、事件、模型目录和 usage。只有服务端轻量辅助任务有一层独立的 OpenAI-compatible Chat Completions 客户端。原始研究版本：`ecce589`；2026-08-19 增量复核至 `d563bfbc`，2026-08-24 再复核至 `b2b4699f`。

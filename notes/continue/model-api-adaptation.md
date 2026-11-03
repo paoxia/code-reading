@@ -1,5 +1,16 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`5522c6f44ca0ac3528b37244818fbfa39b5af470`（提交日期 2026-07-20）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+本地 HEAD 与原 CLI 研究版本一致。CLI 的 chat 流、core 模型与工具抽象及 IDE 边界仍应分开阅读；本轮扩充的是在完整清单中的定位，没有把它描述为新实现的运行时。
+
+当前入口：[extensions/cli/src/commands/chat.ts](../../code/continue/extensions/cli/src/commands/chat.ts)、[core/llm/index.ts](../../code/continue/core/llm/index.ts)。
+
+本专题继续从 [base.ts](../../code/continue/packages/openai-adapters/src/apis/base.ts)、[index.ts](../../code/continue/packages/openai-adapters/src/index.ts) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 ## 结论
 
 Continue 选择 OpenAI Chat Completions 类型作为内部“通用语”，在 `packages/openai-adapters` 中定义 `BaseLlmApi`，每个 provider 将 OpenAI 风格请求转换为原生请求，再把响应与流式 chunk 转回 OpenAI 类型。研究版本：`5522c6f`。

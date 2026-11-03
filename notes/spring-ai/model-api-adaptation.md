@@ -1,5 +1,16 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`4459ae88f4f6d73c72518cdd6dff0334f7d94083`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+ChatClient/Advisor、ChatModel 和 ToolCallingManager 仍是不同层的扩展点。模型返回工具请求后，DefaultToolCallingManager 负责工具执行与结果消息，不能把 Provider streaming 和 Agent 工具循环视作同一个方法。
+
+当前入口：[spring-ai-model/src/main/java/org/springframework/ai/model/tool/DefaultToolCallingManager.java](../../code/spring-ai/spring-ai-model/src/main/java/org/springframework/ai/model/tool/DefaultToolCallingManager.java)、[spring-ai-client-chat/src/main/java/org/springframework/ai/chat/client/DefaultChatClient.java](../../code/spring-ai/spring-ai-client-chat/src/main/java/org/springframework/ai/chat/client/DefaultChatClient.java)。
+
+本专题继续从 [ChatModel.java](../../code/spring-ai/spring-ai-model/src/main/java/org/springframework/ai/chat/model/ChatModel.java)、[StreamingChatModel.java](../../code/spring-ai/spring-ai-model/src/main/java/org/springframework/ai/chat/model/StreamingChatModel.java) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 ## 结论
 
 Spring AI 采用典型的 Port/Adapter 架构：`spring-ai-model` 定义统一模型、消息、响应、选项和工具抽象，各厂商模块分别使用官方 SDK 或原生 HTTP 完成双向转换，Spring Boot 自动配置负责按依赖和属性装配。原始研究版本：`aa17d5c`；2026-08-24 增量复核至 `fd3fd6ec`（区间包含 2.0.1 发布）。本轮主要调整自动配置、工具解析 fallback、MCP transport 和资源安全，没有把 Provider 适配改成统一 wire protocol。

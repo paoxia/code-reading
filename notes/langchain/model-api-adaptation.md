@@ -1,5 +1,16 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`aa13e9c0e94c4e9d203a15a5960b91e29088a98a`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+Agent factory 位于 libs/langchain_v1，使用 StateGraph 组装模型、工具和 middleware；Runnable/ChatModel 位于 core。运行状态和 checkpoint 属于 LangGraph，Provider 字段转换属于模型适配器，二者不应混写成同一抽象。
+
+当前入口：[libs/langchain_v1/langchain/agents/factory.py](../../code/langchain/libs/langchain_v1/langchain/agents/factory.py)、[libs/core/langchain_core/language_models/chat_models.py](../../code/langchain/libs/core/langchain_core/language_models/chat_models.py)。
+
+本专题继续从 [chat_models.py](../../code/langchain/libs/core/langchain_core/language_models/chat_models.py)、[base.py](../../code/langchain/libs/langchain_v1/langchain/chat_models/base.py) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 ## 结论
 
 LangChain 用“核心行为接口 + 标准消息/内容块 + provider 独立集成包 + 动态模型工厂”吸收 API 差异。核心不要求厂商共用 wire protocol，而是要求集成把原生请求和响应映射到 `BaseChatModel`、`AIMessage`、标准 content blocks、tool calls 和 usage。原始研究版本：`fa7ce76`；2026-08-19 增量复核至 `2019bf5e`，2026-08-24 再复核至 `c4c57d35`。Core 新增标准 model exception 并传播 gateway error metadata；Anthropic/Fireworks 会过滤从 v1 content 恢复出的 invalid tool calls。Provider 仍各自转换 wire protocol，但错误和无效调用也开始进入公共语义。

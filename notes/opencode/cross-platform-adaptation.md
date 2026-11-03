@@ -1,70 +1,30 @@
 # OpenCode 跨平台适配分析
 
-> 源码版本：`dev@aefaf140c`
->
-> 研究范围：Shell 选择、提示、解析、权限路径、进程执行和 CLI 分发。
+> 本轮复核：2026-11-02；本地源码 `67139d6827af3a337c80472c33f9cb7c6c2ce500`（提交日期 2026-11-02）。基于本地源码与测试材料静态分析，未运行上游构建、测试或性能基准。
 
-## 1. 结论
+## 当前源码入口
 
-OpenCode 没有强制所有平台使用 Bash，而是把 Shell kind 提升为一等概念。Bash、PowerShell 7、Windows PowerShell 5.1 和 cmd.exe 从提示词、语法解析、命令启动到权限路径识别均有独立处理。这种路线最贴近宿主环境，也使安全分析复杂度最高。
+跨平台实现已位于 `packages/core` 及 util 包。Shell 选择、命令解析、实际进程和权限是相互衔接的层次，不是只判断一次 `process.platform`。
 
-## 2. Shell 识别与选择
+| 职责 | 当前源码 |
+| --- | --- |
+| Shell 探测与选择 | [shell/select.ts](../../code/opencode/packages/core/src/shell/select.ts) |
+| 命令解析与扫描 | [shell/parse.ts](../../code/opencode/packages/core/src/shell/parse.ts)、[shell/scan.ts](../../code/opencode/packages/core/src/shell/scan.ts) |
+| Shell 工具 | [tool/plugin/shell.ts](../../code/opencode/packages/core/src/tool/plugin/shell.ts) |
+| 执行服务 | [shell.ts](../../code/opencode/packages/core/src/shell.ts) |
 
-[`packages/core/src/shell.ts`](../../code/opencode/packages/core/src/shell.ts) 负责发现和筛选可接受 Shell；[`ShellID`](../../code/opencode/packages/opencode/src/tool/shell/id.ts) 将其归为 `bash`、`pwsh`、`powershell`、`cmd`。
+## Shell 选择策略
 
-Shell Tool 初始化时取得最终 Shell，识别名称，再把名称和 `process.platform` 交给 Prompt renderer。平台差异因此在模型第一次调用工具之前就已显式呈现。
+`ShellSelect` 提供 configure 与 resolve，并区分 config/compat 的选择优先级。Windows 候选包含 pwsh、powershell、Git Bash 与 COMSPEC；Unix 从 `/etc/shells` 等信息探测。META 表还区分 login shell、PowerShell 与不兼容选项。
 
-## 3. 分 Shell 提示不是装饰
+因此当前 OpenCode 不能概括为“所有平台统一 Bash”，也不能把候选枚举当作每次运行的固定选取顺序。最终还取决于显式配置、可执行文件存在性与 compatible 限制。
 
-[`prompt.ts`](../../code/opencode/packages/opencode/src/tool/shell/prompt.ts) 为不同 Shell 说明：
+## 工具语义随 Shell 一起变化
 
-- PowerShell 的变量、转义和管道规则；
-- Windows PowerShell 5.1 不支持 `&&`，依赖前一步成功时应用 `if ($?)`；
-- cmd.exe 的转义、路径和临时文件写法；
-- Bash 的常规 POSIX 规则。
+Shell 工具在描述中写入实际 OS 与 Shell，向模型传达该用哪种命令语言。解析与权限检查必须使用相同的环境事实，否则命令可运行却可能被错误解释为另一种 shell 的路径或参数。
 
-模型因此不会被一个固定的“运行 bash 命令”描述误导。专用 read/write/edit 工具也被优先推荐，以减少不同 Shell 文件操作语法带来的风险。
+工具参数还区分前台超时和后台执行。后台返回 `running` 与 shellID，任务完成通过通知继续；收到 shellID 不能当作命令已经完成。输出截断标记、exit、signal、timeout 也应一起解释。
 
-## 4. 解析、权限与路径必须同步适配
+## 验证与限制
 
-Shell Tool 使用 Bash/PowerShell 对应的 tree-sitter parser 拆解命令。解析结果用于找出命令和路径参数，再向权限系统申请具体目录或命令权限，而不是把整个字符串当黑盒。
-
-Windows 分支还会：
-
-- 大小写不敏感地查找环境变量；
-- 展开 `$HOME`、`$PWD`、`$PSHOME`；
-- 归一化外部目录和 glob pattern；
-- POSIX Shell 返回 `/...` 路径时调用 `cygpath -w`；
-- 识别 cmd.exe 自己的文件操作命令集合。
-
-这揭示了一个关键约束：切换 Shell 后，权限解析器若不切换，就可能漏报写入目标或误判命令边界。
-
-## 5. 启动参数与进程行为
-
-PowerShell 使用：
-
-```text
--NoLogo -NoProfile -NonInteractive -Command <command>
-```
-
-这样避免用户 profile 修改非交互执行语义。Unix 使用 detached 进程组，Windows 不使用。路径解析还区分 PowerShell 与 POSIX Shell 的引用和 home 展开。
-
-## 6. 分发
-
-CLI 构建目标覆盖 macOS、Linux、Windows，并包含 x64/arm64 以及部分 x64 非 AVX2 变体。安装/发布脚本在 Windows 跳过 Unix `chmod`，并按 OS 选择包名和可执行文件。
-
-## 7. 限制与风险
-
-- 多 Shell 解析器和提示必须保持一致，否则权限判断与实际执行可能分叉。
-- PowerShell 5.1 与 7 不能只按同一种 PowerShell 处理。
-- Git Bash/MSYS 路径转换依赖 `cygpath` 可用。
-- 本专题没有发现类似 Codex 的三平台原生沙箱矩阵；Shell 权限审批不等同于 OS 强制隔离。
-- 本次未在三个系统上运行集成测试。
-
-## 8. 推荐阅读
-
-1. [`Shell 核心抽象](../../code/opencode/packages/core/src/shell.ts)
-2. [`Shell kind](../../code/opencode/packages/opencode/src/tool/shell/id.ts)
-3. [`Shell Prompt](../../code/opencode/packages/opencode/src/tool/shell/prompt.ts)
-4. [`Shell Tool](../../code/opencode/packages/opencode/src/tool/shell.ts)
-5. [`CLI 构建目标](../../code/opencode/packages/cli/script/build.ts)
+解析边界可读 [shell-parse-syntax.test.ts](../../code/opencode/packages/core/test/shell-parse-syntax.test.ts)。本轮未运行 Windows/macOS/Linux 矩阵，也不据静态分支推断各平台具有等价沙箱；平台支持、Shell 语义与强制隔离需要分别研究。

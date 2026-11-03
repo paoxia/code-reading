@@ -1,5 +1,16 @@
 # Codex Turn Loop：Session、TurnContext 与采样循环
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`aef7d276a4518ad9cb2805a8ddc634eef6f3e7dc`（提交日期 2026-11-02）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+当前主线仍由 Core Thread/Turn、工具路由与 App Server 分层构成。工具 handler 已出现命名迁移，异步用户消息的现行路径是 send_message_to_user_async.rs；Rollout 恢复和产品 JSON-RPC 不能被等同于单一模型消息流。
+
+当前入口：[codex-rs/core/src/session/session.rs](../../code/codex/codex-rs/core/src/session/session.rs)、[codex-rs/core/src/tools/handlers/send_message_to_user_async.rs](../../code/codex/codex-rs/core/src/tools/handlers/send_message_to_user_async.rs)。
+
+本专题继续从 [turn_suspension.rs](../../code/codex/codex-rs/core/src/session/turn_suspension.rs)、[developer_instructions.rs](../../code/codex/codex-rs/core/src/context/developer_instructions.rs) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 > 原始研究版本：`code/codex@28aacbb`
 >
 > 2026-08-19 增量复核版本：`code/codex@f5a3dc55404d`
@@ -98,3 +109,7 @@ turn 前预检查位于 [`session/context_window.rs`](../../code/codex/codex-rs/
 4. [`session/turn_context.rs`](../../code/codex/codex-rs/core/src/session/turn_context.rs)。
 5. [`client.rs`](../../code/codex/codex-rs/core/src/client.rs) 的 `ModelClientSession::stream()`。
 6. [`session/turn_tests.rs`](../../code/codex/codex-rs/core/src/session/turn_tests.rs) 与 `session/tests.rs` 的 terminal event 测试。
+
+## 本轮补充：插件引导跟随本步模型配置
+
+[build_skills_and_plugins](../../code/codex/codex-rs/core/src/session/turn.rs) 现在把本步 model_info 解析出的 ResolvedModelMessages 传入插件构造，使目录定义的插件措辞跟随模型选择。历史引导的替换/移除由 world state 跟踪；它改变请求上下文，不替代工具注册、能力准入或审批。细节见 [模型适配专题](./model-api-adaptation.md)。

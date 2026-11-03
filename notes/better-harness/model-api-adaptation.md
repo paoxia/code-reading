@@ -1,5 +1,16 @@
 # 大模型 API 差异适配
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`b605532fcf1014bcb48d3e6940a5bc64e80cddd5`（提交日期 2026-10-20）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+证据、评估与修复闭环之外，当前 Harness Studio 还拥有 run 与 artifact 工作台。RunView 和 workspace-artifacts 已移动到子目录；Host adapter 和 LLM provider 仍是不同层，报告不能代替真实任务验收。
+
+当前入口：[packages/harness-studio/src/app/run/RunView.tsx](../../code/better-harness/packages/harness-studio/src/app/run/RunView.tsx)、[packages/harness-studio/src/server/workspace/workspace-artifacts.ts](../../code/better-harness/packages/harness-studio/src/server/workspace/workspace-artifacts.ts)。
+
+本专题继续从 [ARCHITECTURE.md](../../code/better-harness/docs/ARCHITECTURE.md)、[README.md](../../code/better-harness/docs/adapters/README.md) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 ## 结论
 
 better-harness 不拥有大模型 wire API 适配层。它适配的是 Claude Code、Codex、Qoder、Cursor、Qwen 等 Agent 宿主的配置资产、session transcript 和输出形态，用统一证据模型评估工作流；宿主自身负责模型选择、鉴权和 API 调用。原始研究版本：`1ad9642`；2026-08-19 增量复核至 `e567e25e`，2026-08-24 再复核至 `77db22a5`。新增 ACP live run、Artifact provider SDK 和 DeepSeek Harness adapter 仍没有引入模型 wire API 层；ACP 在这里是 Agent 宿主执行协议，不是模型协议。

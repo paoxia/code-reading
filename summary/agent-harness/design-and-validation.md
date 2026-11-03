@@ -1,8 +1,20 @@
 # Agent Harness 设计与有效性验证
 
-> 整理时间：2026-08-24
+> 整理时间：2026-08-24；本轮更新：2026-11-02。当前项目版本见 [完整项目总览](../project-landscape/overview.md)。
 >
 > 整理范围：本文是对本仓库 `notes/` 中 Agent Loop、Session、Context、Tool Runtime、权限、恢复、评测与工程交付结论的二次归纳。实现细节与源码证据仍以各项目笔记为准；本文不把设计文档、接口形状或实验分支自动视为已完成能力。
+
+## 2026-11-02：当前实现与建议的边界
+
+本篇的事件 envelope、分层架构和落地次序是跨项目归纳的设计建议，并不是所有项目已经共同实现的一套标准。源码证据与当前包路径以各项目笔记为准；本轮未运行上游测试。
+
+- [pi](../../notes/pi/README.md) 已把 durable 会话、任务和恢复做成独立实验包，旧 AgentHarness 的未实现条目不再代表当前能力。
+- [OpenCode](../../notes/opencode/README.md) 当前以 SessionExecution、Runner 和 Step 处理准入、执行 claim、工具与恢复，旧 SessionProcessor 不再是主入口。
+- [Kimi Code](../../notes/kimi-code/README.md) 当前以 v2 状态机连接 Loop、ContextMemory、tool executor 和 Session 服务，不能继续套用旧 agent-core/kosong 路径。
+- [Goose](../../notes/goose/README.md) 已拆除原 agent.rs，改从平台服务、SessionRuntime 和状态机装配阅读。
+- [DeepSeek Harness](../../notes/deepseek-harness/architecture.md) 的工具批次已进入 core/tools，Preset 使用声明与 Registry，native 组件进入 system workspace。
+
+完整仓库还包含 [推理引擎、算子、通信、训练和存储](../ai-infrastructure/architecture-and-reading-guide.md)。这些底层能力可以影响 Harness 的性能和成本，但不替代任务验收、工具权限或业务幂等。
 
 ## 1. 结论先行
 
@@ -805,7 +817,7 @@ Finding 需要同时包含已检查 gap、影响、最小 owner、修复路线�
 
 ## 14. 最容易误判的地方
 
-1. **有 API 不等于能力已实现**：pi 新 `AgentHarness` 的多个公开入口仍是 scaffold；OpenCode V2 也有明确未完成的恢复和 facade 能力。
+1. **接口与稳定性需分别检查**：pi 已有独立 `pi-durable` 实现持久化提交与恢复，但明确标为 Experimental；OpenCode 当前主链已迁入 core 的 SessionExecution/Runner，不能沿用旧 V2 scaffold 结论。
 2. **有 Session 不等于可恢复工作区**：消息恢复不能证明 Git、文件和外部副作用一致。
 3. **有 approval 不等于有沙箱**：应用层允许/拒绝不能限制已获准进程的 OS 权限。
 4. **有 Checkpoint 不等于有高质量 Context**：Graph state 恢复后仍需单独编译模型消息。

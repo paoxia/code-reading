@@ -1,5 +1,16 @@
 # DeepSeek Harness 深度架构与运行时分析
 
+## 2026-11-02 复核与当前定位
+
+- 本地源码：`ce7073d51254c26cd63b22a60835b8f948deb447`（提交日期 2026-10-30）。
+- 核对方式：本地源码、调用入口与测试材料静态阅读；未运行上游构建或测试。下文早期日期与版本号保留作研究历史，本节记录本轮基线与修订边界。
+
+工具批次已从 agent-loop 拆到 core/tools 的 executeToolBatch：并行 dispatch、模型顺序提交、exclusive barrier 和取消排空分离。Preset 改由声明包/Registry 与 bundle patch 组合，原 CLI agent-presets 目录已移除。
+
+当前入口：[packages/core/tools/src/batch.ts](../../code/deepseek-harness/packages/core/tools/src/batch.ts)、[packages/preset/agent-preset/README.md](../../code/deepseek-harness/packages/preset/agent-preset/README.md)。
+
+本专题继续从 [profile.ts](../../code/deepseek-harness/packages/boot/app-boot/src/profile.ts)、[standard.patch.yml](../../code/deepseek-harness/packages/bundle/web-app/presets/standard.patch.yml) 进入；涉及已迁移的运行时，以本节和项目总览中的当前路径为准。
+
 > 原始研究版本：`main@47f943859bef`
 >
 > 2026-08-19 增量复核版本：`main@99f6f02fecdb`。本次变更未改变 Cordis Service/Provider/Consumer 主架构，主要是 replay、PTY、Web UI 和发布边界修复。
@@ -85,7 +96,7 @@ Agent Plane 则通过 Preset 挂载，贡献该 Agent 可见的 Prompt、Tools�
 - Realm 解决“同名 Service 是否是独立实例”；
 - Host/Agent Plane 解决“谁拥有生命周期与跨会话访问”。
 
-[`standard/agent.cordis.yml`](../../code/deepseek-harness/apps/cli/config/agent-presets/standard/agent.cordis.yml) 的大量注释是在维护这些所有权约束。例如 Sub-Agent Registry 必须在 Host Plane，Preset 只贡献 delegation tools；否则 Web API 看不到 Registry，或多个 Preset 重复注册同名 Provider。
+[`presets/standard.patch.yml`](../../code/deepseek-harness/packages/bundle/web-app/presets/standard.patch.yml) 的大量注释是在维护这些所有权约束。例如 Sub-Agent Registry 必须在 Host Plane，Preset 只贡献 delegation tools；否则 Web API 看不到 Registry，或多个 Preset 重复注册同名 Provider。
 
 ## 5. `ReactLoopAgent` 的驱动状态机
 
@@ -163,7 +174,7 @@ LLM 返回异步 chunk。Loop 对每个 chunk：
 
 ## 10. 多 Tool 调度与确定性提交
 
-[`executeToolCalls()`](../../code/deepseek-harness/packages/core/agent-loop/src/tool-calls.ts) 先按模型输出顺序建立计划。每个 Tool 可判定为 exclusive 或 concurrency-safe parallel。
+[`executeToolBatch()`](../../code/deepseek-harness/packages/core/tools/src/batch.ts) 先按模型输出顺序建立计划。每个 Tool 可判定为 exclusive 或 concurrency-safe parallel。
 
 ```text
 模型顺序： A  B  C  D
@@ -288,12 +299,12 @@ Sandbox 是独立 capability。Linux 支持 bwrap/Landlock，macOS 使用 Seatbe
 apps/cli/src/bin.ts
   → boot/app-boot profile layers
   → bundle/base cordis.patch.yml
-  → agent preset agent.cordis.yml
+  → agent-preset 声明与 bundle preset patch
   → core/agent service
   → core/agent-loop ReactLoopAgent
   → system-prompt assemble + session.deriveMessages
   → llm.prepareCall/stream
-  → tool-calls scheduler
+  → tools/batch scheduler
   → ToolRuntime interception/execution
   → Session append/projection/persistence
 ```

@@ -1,36 +1,37 @@
-# 大模型 API 差异适配
+# OpenCode 大模型 API 差异适配
 
-## 结论
+> 本轮复核：2026-11-02；本地源码 `67139d6827af3a337c80472c33f9cb7c6c2ce500`（提交日期 2026-11-02）。基于本地源码与测试材料静态分析，未运行上游构建、测试或性能基准。
 
-当前 opencode 在 `@opencode-ai/llm` 内实现了分层协议栈：canonical schema → provider facade → route/auth/transport → protocol lowering/parsing。上层 Session Runner 只处理统一 `LLMRequest` 和 `LLMEvent`，厂商差异被限制在 provider 与 protocol 模块。原始研究版本：`d36a2d8`；2026-08-19 增量复核至 `da4730e4`，2026-08-24 再复核至 `03521003`，该分层仍未改变。新修复只在确认目标是 `@ai-sdk/openai-compatible` provider 时注入 `textVerbosity`，避免把 OpenAI 专有参数误传给其他兼容 facade。
+## 结论与分层
 
-## 分层结构
-
-`LLM.request` 将 system、messages、tools、tool choice、generation 和 HTTP 选项规范化；`generateObject` 甚至用强制的合成工具实现跨协议结构化输出，避开各家 JSON mode 的语义差异（[`llm.ts`](../../code/opencode/packages/llm/src/llm.ts)）。Session Runner 每轮只调用统一的 `llm.stream(request)` 并持久化 text、reasoning、usage、provider error 和 tool events（[`session/runner/llm.ts`](../../code/opencode/packages/core/src/session/runner/llm.ts)）。
-
-Provider facade 组合认证、base URL、默认参数与一到多个 route。OpenAI 同时公开 Responses、Responses WebSocket 和 Chat route；Anthropic 使用 `x-api-key` 与 Messages route（[`providers/openai.ts`](../../code/opencode/packages/llm/src/providers/openai.ts)、[`providers/anthropic.ts`](../../code/opencode/packages/llm/src/providers/anthropic.ts)）。OpenAI-compatible provider 则复用兼容协议并开放 base URL/options。
-
-Protocol 模块是真正的转换边界。OpenAI Chat 和 Anthropic Messages 各自定义原生请求/事件 schema、把统一消息和工具 lowering 到 wire body、再把 SSE 增量解析成统一 lifecycle/tool/usage events（[`openai-chat.ts`](../../code/opencode/packages/llm/src/protocols/openai-chat.ts)、[`anthropic-messages.ts`](../../code/opencode/packages/llm/src/protocols/anthropic-messages.ts)）。工具 schema projection 和流式参数拼接是共享 utility。
-
-## Route 与统一事件状态机
-
-Provider 可同时提供多条 route，选择依据不只 provider 名，还包括模型能力、配置与 transport。例如 OpenAI Responses WebSocket 失败可选择其他 route，但已经产生事件后切换必须避免重复 output。Protocol parser 将原生事件归一为 start/delta/end、tool、usage 和 provider error，Session Runner 据此持久化 part。
+模型层已迁到 `packages/ai`。应区分三件事：Provider 描述身份和默认设置，Route 选择可执行协议及传输，Protocol 负责真实请求与流事件转换。模型名字和 endpoint 相同，不代表协议功能相同。
 
 ```text
-LLMRequest
-  → provider defaults/auth
-  → route selection
-  → protocol.lower(request)
-  → transport/SSE/WebSocket
-  → protocol.parse(events)
-  → LLMEvent
-  → Session Runner parts
+SessionRunner / SessionModelRequest
+  → packages/ai：LLM client
+  → provider + route + transport
+  → protocol request / streaming decoder
+  → 统一事件 → SessionStep → 记录与工具结算
 ```
 
-`generateObject` 的合成工具方案要求目标模型可靠支持强制 tool choice；不支持时应显式失败或走其他策略，不能把文本 JSON 当已验证对象。流式 tool arguments、reasoning 和 usage 的 terminal event 顺序需要测试，因为 Session 持久化依赖完整 lifecycle。
+| 层 | 当前入口 | 核对重点 |
+| --- | --- | --- |
+| Session 模型请求 | [model-request.ts](../../code/opencode/packages/core/src/session/model-request.ts) | 上下文、工具与压缩请求 |
+| Runner 模型层 | [runner/llm.ts](../../code/opencode/packages/core/src/session/runner/llm.ts) | 运行时到 AI 的边界 |
+| 公共 LLM | [llm.ts](../../code/opencode/packages/ai/src/llm.ts) | 请求与事件类型 |
+| 路由 | [route.ts](../../code/opencode/packages/ai/src/route.ts) | 协议及运行参数 |
+| OpenAI Chat | [openai-chat.ts](../../code/opencode/packages/ai/src/protocols/openai-chat.ts) | 消息、工具和 stream |
+| Responses | [openai-responses.ts](../../code/opencode/packages/ai/src/protocols/openai-responses.ts) | Responses 协议与状态 |
+| Anthropic | [anthropic-messages.ts](../../code/opencode/packages/ai/src/protocols/anthropic-messages.ts) | content block 与工具结果 |
 
-## 取舍
+## 请求与响应两侧都要转换
 
-- 原生 schema 会严格暴露协议不兼容，而不是依赖 SDK 的宽松 `any`。
-- provider 与 protocol 分离后，同一厂商多协议切换很清晰，但维护成本高。
-- OpenAI-compatible 仍需要 profile/options 修补；兼容名称不代表 reasoning、usage、strict schema 或缓存都相同。
+请求侧需要把统一消息、工具参数和 reasoning/缓存等选项转为协议字段。响应侧则需要把文本片段、tool arguments、usage、finish reason 归一化；工具参数的部分 JSON 不是可立即执行的完整参数。
+
+Provider-specific 的差异仍保留在各协议实现及选项中。统一接口解决公共运行时如何消费，不承诺不同模型的思考、多模态或缓存能力等价。
+
+## 错误与重试边界
+
+错误分类和 tool runtime 位于 [provider-error.ts](../../code/opencode/packages/ai/src/provider-error.ts)、[tool-runtime.ts](../../code/opencode/packages/ai/src/tool-runtime.ts)；Session 的恢复选择则在 [step.ts](../../code/opencode/packages/core/src/session/runner/step.ts) 和 [retry.ts](../../code/opencode/packages/core/src/session/runner/retry.ts)。传输层可重试与已落盘输出后的 continuation 是不同决策。
+
+阅读时固定一个 route，先跟踪请求编译，再跟踪流的终态与 usage，最后核对 [Session 重试测试](../../code/opencode/packages/core/test/session-runner-retry.test.ts)。不要沿用旧笔记中已移除的 `packages/llm` 路径。
