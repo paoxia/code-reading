@@ -11,7 +11,7 @@
 
 - [Agent 上下文管理机制横向总结](./context-management/agent-context-management.md)
 - [Agent Tool 调用与错误处理横向总结](./agent-tools/tool-execution-and-error-handling.md)
-- [Agent Harness 设计与有效性验证](./agent-harness/design-and-validation.md)
+- [Agent Harness 设计与有效性验证](./agent-harness/design-and-validation.md)：2026-11-05 补充构建 Agent 的七条核心经验、源码依据与最小落地路线。
 - [Coding Agent 跨平台适配总览](./coding-agents/cross-platform-adaptation.md)
 
 ## 历史复核
