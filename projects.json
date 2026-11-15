@@ -463,6 +463,24 @@
       "status": "active",
       "path": "code/deepep-ascend",
       "notes": "研究Ascend上的MoE专家并行通信、dispatch/combine及与GPU版DeepEP的接口关系"
+    },
+    {
+      "name": "mcode-stack",
+      "group": "coding-agents",
+      "repo": "https://github.com/MiniMax-AI/mcode-stack",
+      "description": "Workflows and skills used by the MiniMax Code team",
+      "status": "active",
+      "path": "code/mcode-stack",
+      "notes": "研究可安装的Agent工程工作流、上下文管理、证据审查、插件清单与PR审查裁决"
+    },
+    {
+      "name": "daily-stock-analysis",
+      "group": "ai-applications",
+      "repo": "https://github.com/ZhuLinsen/daily_stock_analysis",
+      "description": "LLM-powered multi-market stock analysis and reporting system",
+      "status": "active",
+      "path": "code/daily-stock-analysis",
+      "notes": "研究行情与新闻聚合、LLM分析、任务编排、报告持久化、回测和通知推送的工程边界"
     }
   ]
 }
