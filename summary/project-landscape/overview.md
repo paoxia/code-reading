@@ -2,7 +2,7 @@
 
 ## 研究范围与更新方式
 
-当前清单共 **50 个项目、6 个分类**。2026-11-15 增补 [MCode Stack](../../notes/mcode-stack/README.md) 与 [Daily Stock Analysis](../../notes/daily-stock-analysis/README.md)，分别归入 Coding Agent 与 AI 应用；新增项目的版本单独列在下表，其他项目保留原复核日期。
+当前清单共 **51 个项目、6 个分类**。2026-11-15 增补 [MCode Stack](../../notes/mcode-stack/README.md) 与 [Daily Stock Analysis](../../notes/daily-stock-analysis/README.md)，2026-11-20 将 WeKnora 收录到 AI 应用与示例。下表记录各项目的本地研究版本。
 
 基线复核日期为 **2026-11-02**，覆盖当时全部 **48 个项目、6 个分类**。本地源码均已存在，该轮为 18 个新增基础设施项目补充首次笔记，为已有项目和专题补充当前基线，并修订模块迁移与过时结论。随后继续深化 18 个新增项目，补充调度准入、缓存所有权、张量布局、异步事件和提交/完成边界。
 
@@ -21,7 +21,7 @@
        ↓
 执行与交付：Coding Agent / Agent 平台与助手
        ↓
-领域使用：Financial Services 插件、cookbooks 与工作流示例
+领域使用：WeKnora 知识库、Financial Services 插件与工作流示例
 ```
 
 这是阅读视角，图中相邻层不一定存在直接代码依赖。Agent 运行时、模型服务与算子库优化的是不同状态和成本，不应只用功能数量或单一 benchmark 排名。
@@ -109,7 +109,7 @@
 | --- | --- | --- | --- | --- |
 | [annotated-transformer](../../notes/annotated-transformer/README.md) | Transformer论文的注释实现，深度学习经典教程 | `debc9fd747bb` | 2022-05-02 | 否 |
 
-## AI 应用与示例（2）
+## AI 应用与示例（3）
 
 面向具体行业和业务场景的 AI 应用、工作流与参考实现。
 
@@ -117,12 +117,13 @@
 | --- | --- | --- | --- | --- |
 | [financial-services](../../notes/financial-services/README.md) | 研究Anthropic面向金融服务场景提供的Agent示例、工作流和参考实现 | `60565064557c` | 2026-10-28 | 否 |
 | [daily-stock-analysis](../../notes/daily-stock-analysis/README.md) | 行情与新闻聚合、LLM 分析、报告和推送；2026-11-15 首次静态阅读，源码目录稀疏检出 | `f044e95f2156` | 2026-11-14 | 是 |
+| [weknora](../../notes/weknora/README.md) | 文档入库、混合检索与引用、Agent 工具循环和自动 Wiki | `1b3a1febf3e5` | 2026-11-20 | 否 |
 
 ## 推荐的三条阅读路线
 
 1. **做一个 Agent**：mini-swe-agent → pi 的轻量 Loop → Codex/OpenCode/Kimi 的 Session 与工具 → LangGraph/Java 框架 → DeerFlow/OpenClaw/Multica 的平台边界 → SWE-agent/Better Harness 的验收与证据。
 2. **理解模型如何运行**：Annotated Transformer → nano-vLLM → mini-SGLang → vLLM/SGLang/TensorRT-LLM → FlashInfer/FlashMLA/DeepGEMM 等算子 → DeepEP/EPLB/DeepJIT → DeepInfer。需要训练与数据底座时进入 DeepSpec/DualPipe/3FS。
-3. **把能力接入业务**：Spring AI/LangChain 的模型与工具抽象 → AgentScope Java/Spring AI Alibaba 的状态、扩展与协作 → Sub2API 的协议/账号边界 → Financial Services 的领域插件与 reference-only handoff。
+3. **把能力接入业务**：Spring AI/LangChain 的模型与工具抽象 → AgentScope Java/Spring AI Alibaba 的状态、扩展与协作 → Sub2API 的协议与账号边界。应用侧可阅读 WeKnora 的文档导入、问答和 Wiki，以及 Financial Services 的领域插件与 reference-only handoff。
 
 每条路线都先跟踪一次输入到输出的真实调用链，再研究扩展点，最后检查失败、取消、恢复与未完成实现。
 

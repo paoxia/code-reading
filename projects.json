@@ -481,6 +481,15 @@
       "status": "active",
       "path": "code/daily-stock-analysis",
       "notes": "研究行情与新闻聚合、LLM分析、任务编排、报告持久化、回测和通知推送的工程边界"
+    },
+    {
+      "name": "weknora",
+      "group": "ai-applications",
+      "repo": "https://github.com/Tencent/WeKnora",
+      "description": "Open-source knowledge platform for RAG, agentic reasoning, and Wiki compilation",
+      "status": "active",
+      "path": "code/weknora",
+      "notes": "研究企业知识库的文档导入与索引、混合检索与引用、Agent 工具调用和自动 Wiki"
     }
   ]
 }

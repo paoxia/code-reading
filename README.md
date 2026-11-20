@@ -18,8 +18,9 @@
 
 ## 研究索引
 
-当前清单共 **50 个项目、6 个分类**，涵盖 Coding Agent、Agent 框架、Agent 平台与助手、AI 基础设施、模型原理和 AI 应用。2026-11-02 建立了原有 48 个项目的研究基线；2026-11-15 增补以下两个项目，其他项目仍保留原复核日期。源码版本以各笔记记录的本地 HEAD 为准，研究版本与历史状态见项目总览。
+当前清单共 **51 个项目、6 个分类**，涵盖 Coding Agent、Agent 框架、Agent 平台与助手、AI 基础设施、模型原理和 AI 应用。2026-11-02 建立了原有 48 个项目的研究基线。下列项目为后续新增，研究版本与历史状态见项目总览。
 
+- [WeKnora](notes/weknora/README.md)（2026-11-20）：企业知识库的文档导入、RAG 问答、Agent 和自动 Wiki。
 - [MCode Stack](notes/mcode-stack/README.md)：MiniMax Code 团队的 Agent 工程工作流、Skills、插件组织与审查机制。
 - [Daily Stock Analysis](notes/daily-stock-analysis/README.md)：多市场股票数据、LLM 分析、报告与推送的工程参考。
 

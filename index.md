@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "Code Reading"
   text: "读源码，也读懂设计"
-  tagline: 50 个开源项目，贯通 Agent、推理引擎、算子与数据底座
+  tagline: 51 个开源项目，贯通 Agent、推理引擎、算子与数据底座
   actions:
     - theme: brand
       text: 开始阅读
@@ -42,4 +42,4 @@ features:
 
 在顶部“项目笔记”中按分类选择项目，也可以进入“跨项目总结”查看横向分析；按 `Ctrl+K` / `⌘K` 可搜索全部文档。
 
-基线复核：2026-11-02；2026-11-15 增补 MCode Stack 与 Daily Stock Analysis。具体本地提交、研究范围及浅克隆状态见[项目总览](./summary/project-landscape/overview.md)。
+基线复核为 2026-11-02，2026-11-15 增补 MCode Stack 与 Daily Stock Analysis，2026-11-20 收录 WeKnora。具体本地提交、研究范围及浅克隆状态见[项目总览](./summary/project-landscape/overview.md)。
